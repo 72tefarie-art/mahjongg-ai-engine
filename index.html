@@ -1,4 +1,4 @@
-  <style><!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -67,68 +67,6 @@
     }
   </style>
 </head>
-    .coach-speech-bubble::before { content: ""; position: absolute; left: -10px; top: 18px; width: 0; height: 0; border-top: 8px solid transparent; border-bottom: 8px solid transparent; border-right: 11px solid #fbbf24; }
-    .coach-speech-bubble::after { content: ""; position: absolute; left: -7px; top: 19px; width: 0; height: 0; border-top: 7px solid transparent; border-bottom: 7px solid transparent; border-right: 9px solid #ffffff; }
-   <style>
-    :root {
-      --felt-center: #326c5b;
-      --felt-edge: #1e463a;
-      --rail-top: #5c341d;
-      --rail-bottom: #381e0f;
-      --rail-border: #251309;
-    }
-    body { font-family: 'Inter', sans-serif; background-color: #26170e; color: #1e293b; user-select: none; overflow-x: hidden; }
-    .table-room { background: radial-gradient(circle at 50% 35%, #3b2416 0%, #1d1109 100%); perspective: 1150px; }
-    .mahogany-frame { background: linear-gradient(180deg, var(--rail-top) 0%, var(--rail-bottom) 100%); border: 4px solid var(--rail-border); border-radius: 26px; box-shadow: 0 24px 48px rgba(0,0,0,0.65), inset 0 2px 3px rgba(255,224,180,0.25), inset 0 -4px 10px rgba(0,0,0,0.6); padding: 12px; position: relative; }
-    .felt-surface { background-color: var(--felt-edge); background-image: radial-gradient(circle at 50% 42%, var(--felt-center) 0%, var(--felt-edge) 100%), repeating-linear-gradient(45deg, rgba(255,255,255,0.015) 0px, rgba(255,255,255,0.015) 2px, transparent 2px, transparent 4px); border-radius: 16px; box-shadow: inset 0 6px 22px rgba(0,0,0,0.55); transform: rotateX(4deg); transform-origin: center bottom; position: relative; overflow: hidden; }
-    .wall-brick { width: 15px; height: 11px; background: linear-gradient(180deg, #347561 0%, #204c3f 100%); border: 1px solid #a7f3d0; border-bottom: 3px solid #132e26; border-radius: 3px; box-shadow: 0 2px 3px rgba(0,0,0,0.45); }
-    .wall-brick-side { width: 11px; height: 14px; background: linear-gradient(90deg, #347561 0%, #204c3f 100%); border: 1px solid #a7f3d0; border-right: 3px solid #132e26; border-radius: 3px; box-shadow: 2px 2px 3px rgba(0,0,0,0.45); }
-    .wooden-rack { background: linear-gradient(180deg, #7c4727 0%, #562f18 55%, #3d200f 100%); border: 2px solid #2b160a; border-top: 3px solid #a6683e; border-radius: 18px; box-shadow: 0 14px 28px rgba(0,0,0,0.55), inset 0 2px 4px rgba(255,220,185,0.25); }
-    .wooden-rack-ledge { background: linear-gradient(180deg, #432311 0%, #68391e 100%); border: 1.5px solid #291409; border-radius: 12px; box-shadow: inset 0 4px 10px rgba(0,0,0,0.55); }
-    .mj-tile { background: linear-gradient(180deg, #ffffff 0%, #fbf9f4 78%, #e8e0cf 100%); border: 1.5px solid #cbd5e1; border-bottom: 5px solid #245244; border-right: 2px solid #94a3b8; border-radius: 9px; box-shadow: 0 4px 7px rgba(15,23,42,0.35); transition: transform 0.16s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.16s ease, border-color 0.16s ease; position: relative; display: inline-flex; flex-direction: column; align-items: center; justify-content: space-between; cursor: pointer; }
-    .mj-tile:hover:not(.mj-small) { transform: translateY(-7px) scale(1.03); box-shadow: 0 10px 18px rgba(15,23,42,0.45); }
-    .mj-tile.selected { transform: translateY(-15px) scale(1.04); border-color: #d97706; border-bottom-color: #b45309; box-shadow: 0 0 0 3px #fbbf24, 0 14px 22px rgba(15,23,42,0.5); }
-    .mj-tile.hint-drop { outline: 2.5px dashed #fb7185; outline-offset: 2px; }
-    .mj-tile.hint-keep { border-top: 4px solid #10b981; }
-    .mj-tile.mj-small { width: 34px; height: 46px; border-bottom-width: 3px; border-radius: 6px; cursor: default; }
-    .mj-tile.mj-rack { width: 50px; height: 70px; }
-    @media (min-width: 768px) { .mj-tile.mj-rack { width: 58px; height: 80px; } }
-    .mj-tile-back { background: linear-gradient(180deg, #33705e 0%, #224d40 100%); border: 1px solid #a7f3d0; border-bottom: 3px solid #143027; border-radius: 5px; box-shadow: 0 2px 4px rgba(0,0,0,0.35); }
-    @keyframes reachDraw { 0% { opacity: 0; transform: translate(70px, 95px) rotate(-18deg) scale(0.92); } 45% { opacity: 0.92; transform: translate(0px, 0px) rotate(-6deg) scale(1); } 100% { opacity: 0; transform: translate(45px, 85px) rotate(-12deg) scale(0.95); } }
-    @keyframes reachDiscard { 0% { opacity: 0; transform: translate(20px, 90px) rotate(12deg) scale(0.92); } 45% { opacity: 0.92; transform: translate(0px, -18px) rotate(4deg) scale(1); } 100% { opacity: 0; transform: translate(35px, 90px) rotate(14deg) scale(0.95); } }
-    .anim-reach-draw { animation: reachDraw 0.52s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
-    .anim-reach-discard { animation: reachDiscard 0.52s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
-    @keyframes pulseCall { 0%, 100% { box-shadow: 0 0 0 0 rgba(251, 191, 36, 0.7); } 50% { box-shadow: 0 0 0 8px rgba(251, 191, 36, 0); } }
-    .pulse-alert { animation: pulseCall 1.4s infinite; }
-    .coach-speech-bubble { position: relative; }
-    .coach-speech-bubble::before { content: ""; position: absolute; left: -10px; top: 18px; width: 0; height: 0; border-top: 8px solid transparent; border-bottom: 8px solid transparent; border-right: 11px solid #fbbf24; }
-    .coach-speech-bubble::after { content: ""; position: absolute; left: -7px; top: 19px; width: 0; height: 0; border-top: 7px solid transparent; border-bottom: 7px solid transparent; border-right: 9px solid #ffffff; }
-    ::-webkit-scrollbar { width: 6px; height: 6px; }
-    ::-webkit-scrollbar-track { background: #e7e2d6; }
-    ::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 9999px; }
-
-    /* 4 Dark Skin-Tone Player Hand Palettes */
-    :root {
-      --skin-tone-1: #8D5524; /* Warm Caramel / Chestnut */
-      --skin-tone-2: #6F3E1D; /* Rich Umber / Mahogany */
-      --skin-tone-3: #4E2A14; /* Deep Espresso */
-      --skin-tone-4: #361C0E; /* Rich Ebony */
-    }
-    .player-hand-1, [data-seat="0"] .player-hand { background-color: var(--skin-tone-1); color: #FDF8F5; }
-    .player-hand-2, [data-seat="1"] .player-hand { background-color: var(--skin-tone-2); color: #FDF8F5; }
-    .player-hand-3, [data-seat="2"] .player-hand { background-color: var(--skin-tone-3); color: #FDF8F5; }
-    .player-hand-4, [data-seat="3"] .player-hand { background-color: var(--skin-tone-4); color: #FDF8F5; }
-
-    /* Subtle attention ring on Start Game for first-time visitors */
-    @keyframes startPulse {
-      0%, 100% { box-shadow: 0 0 0 0 rgba(56, 189, 248, 0.55); }
-      50% { box-shadow: 0 0 0 8px rgba(56, 189, 248, 0); }
-    }
-    .first-visit-start-pulse {
-      animation: startPulse 2.2s infinite;
-    }
-  </style>
-</head>
 <body class="min-h-screen flex flex-col">
 
   <!-- TOP GAME HUD BAR -->
@@ -177,15 +115,15 @@
           <div id="reach-hand-overlay" class="hidden pointer-events-none absolute bottom-3 left-1/2 -translate-x-1/2 z-20">
             <svg width="110" height="110" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg" class="drop-shadow-2xl">
               <ellipse cx="62" cy="74" rx="26" ry="30" fill="rgba(15,23,42,0.35)"/>
-              <path d="M44 96C41 78 39 58 43 44C45 38 51 39 51 46V62C52 46 53 33 58 33C63 33 63 46 63 61C65 46 67 35 72 36C76 37 75 49 74 63C77 51 80 43 84 45C88 47 85 62 82 77C79 90 73 102 63 104C52 106 46 102 44 96Z" fill="#E8B48A" stroke="#9A643D" stroke-width="2.5"/>
-              <path d="M35 68C32 62 36 56 41 59L47 68L42 78L35 68Z" fill="#E8B48A" stroke="#9A643D" stroke-width="2.5"/>
+              <path d="M44 96C41 78 39 58 43 44C45 38 51 39 51 46V62C52 46 53 33 58 33C63 33 63 46 63 61C65 46 67 35 72 36C76 37 75 49 74 63C77 51 80 43 84 45C88 47 85 62 82 77C79 90 73 102 63 104C52 106 46 102 44 96Z" fill="#8D5524" stroke="#4E2A14" stroke-width="2.5"/>
+              <path d="M35 68C32 62 36 56 41 59L47 68L42 78L35 68Z" fill="#8D5524" stroke="#4E2A14" stroke-width="2.5"/>
             </svg>
           </div>
 
           <!-- TOP WALL + WEST -->
           <div class="flex flex-col items-center gap-1.5">
             <div id="table-wall-top" class="flex items-center gap-0.5 opacity-90"></div>
-            <div id="seat-2-box" class="bg-black/30 backdrop-blur-xs border border-white/20 rounded-xl px-3.5 py-1.5 flex flex-col items-center gap-1 transition">
+            <div id="seat-2-box" class="player-hand-3 bg-black/30 backdrop-blur-xs border border-white/20 rounded-xl px-3.5 py-1.5 flex flex-col items-center gap-1 transition">
               <div class="flex items-center gap-2 text-xs text-emerald-50">
                 <span class="text-base">⚡</span><span class="font-bold">Marcus (West)</span>
                 <span class="text-[10px] bg-amber-400/20 text-amber-200 border border-amber-300/30 px-1.5 rounded">Fast Caller</span>
@@ -199,7 +137,7 @@
           <div class="grid grid-cols-1 md:grid-cols-12 gap-2.5 items-center my-auto">
             <div class="md:col-span-3 flex items-center justify-center gap-2">
               <div id="table-wall-left" class="hidden md:flex flex-col items-center gap-0.5 opacity-90"></div>
-              <div id="seat-3-box" class="bg-black/30 backdrop-blur-xs border border-white/20 rounded-xl p-2.5 w-full max-w-[215px] flex flex-col items-center gap-1 transition">
+              <div id="seat-3-box" class="player-hand-4 bg-black/30 backdrop-blur-xs border border-white/20 rounded-xl p-2.5 w-full max-w-[215px] flex flex-col items-center gap-1 transition">
                 <div class="flex items-center justify-center w-full text-xs text-emerald-50"><span class="font-bold flex items-center gap-1">🎭 Clara (North)</span></div>
                 <div class="text-[10px] text-purple-200 bg-purple-500/20 border border-purple-300/30 px-1.5 rounded">Concealed Specialist</div>
                 <div id="seat-3-hand" class="flex flex-wrap gap-1 justify-center mt-0.5"></div>
@@ -229,7 +167,7 @@
             </div>
 
             <div class="md:col-span-3 flex items-center justify-center gap-2">
-              <div id="seat-1-box" class="bg-black/30 backdrop-blur-xs border border-white/20 rounded-xl p-2.5 w-full max-w-[215px] flex flex-col items-center gap-1 transition">
+              <div id="seat-1-box" class="player-hand-2 bg-black/30 backdrop-blur-xs border border-white/20 rounded-xl p-2.5 w-full max-w-[215px] flex flex-col items-center gap-1 transition">
                 <div class="flex items-center justify-center w-full text-xs text-emerald-50"><span class="font-bold flex items-center gap-1">🛡️ Evelyn (East)</span></div>
                 <div class="text-[10px] text-sky-200 bg-sky-500/20 border border-sky-300/30 px-1.5 rounded">Defensive Reader</div>
                 <div id="seat-1-hand" class="flex flex-wrap gap-1 justify-center mt-0.5"></div>
@@ -244,7 +182,7 @@
       </div>
 
       <!-- WOODEN TILE RACK + COACH TSEGE -->
-      <div id="seat-0-box" class="wooden-rack text-amber-50 p-3 sm:p-3.5 relative mt-2">
+      <div id="seat-0-box" class="player-hand-1 wooden-rack text-amber-50 p-3 sm:p-3.5 relative mt-2">
         <div class="flex items-start gap-3 mb-2.5 bg-amber-950/65 border border-amber-300/30 rounded-2xl p-2.5 shadow-md">
           <div class="flex flex-col items-center shrink-0">
             <div id="coach-avatar-wrap" class="w-14 h-14 rounded-2xl bg-gradient-to-br from-pink-100 via-amber-50 to-emerald-100 border-2 border-amber-400 shadow-lg flex items-center justify-center relative">
