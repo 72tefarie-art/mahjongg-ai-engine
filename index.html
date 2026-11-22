@@ -1671,11 +1671,12 @@
       }
     }
 
-    // =========================================================================
+   // =========================================================================
     // 7. ROUND COMPLETION & SCORING
     // =========================================================================
     function finishRoundWithWinner(seatIdx, concreteHand, fromDiscard) {
       gameState.phase = 'ROUND_OVER';
+      MahjonggLaunchKit.onRoundEnd(seatIdx === 0);
       SoundFX.mahjongg();
       const seat = gameState.seats[seatIdx];
       const earnedPts = concreteHand.points * (fromDiscard ? 1 : 2);
@@ -1718,6 +1719,7 @@
 
     function finishRoundWallGame() {
       gameState.phase = 'ROUND_OVER';
+      MahjonggLaunchKit.onRoundEnd(false);
       playerStats.handsPlayed++;
       persistPlayerStats(playerStats);
       document.getElementById('round-modal-icon').textContent = '🧱';
@@ -1730,6 +1732,7 @@
     }
 
     function startNextRound() {
+      MahjonggLaunchKit.onRoundStart();
       const modal = document.getElementById('round-modal');
       modal.classList.add('hidden');
       modal.classList.remove('flex');
@@ -2146,7 +2149,71 @@
     initNewGame(false);
     openWelcomeScreen(false);
   </script>
+// =========================================================================
+    // LAUNCH KIT: ROUND TRACKING, WIN-RATE STATS & FIRST-VISIT PULSE
+    // =========================================================================
+    const MahjonggLaunchKit = (() => {
+      const STORAGE_KEY = 'mj2026_launch_stats_v1';
+      let roundStartTime = null;
+      let stats = { played: 0, wins: 0, totalMs: 0 };
 
+      try {
+        const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
+        if (saved && typeof saved.played === 'number') stats = saved;
+      } catch (_) {}
+
+      function save() {
+        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(stats)); } catch (_) {}
+      }
+
+      function renderBadge() {
+        const playedEl = document.getElementById('stat-played');
+        const winsEl = document.getElementById('stat-wins');
+        const rateEl = document.getElementById('stat-rate');
+        const timeEl = document.getElementById('stat-time');
+        if (!playedEl) return;
+
+        const rate = stats.played > 0 ? Math.round((stats.wins / stats.played) * 100) : 0;
+        const mins = Math.round(stats.totalMs / 60000);
+        playedEl.textContent = stats.played;
+        winsEl.textContent = stats.wins;
+        rateEl.textContent = `${rate}%`;
+        timeEl.textContent = `${mins}m`;
+      }
+
+      function initFirstVisitPulse() {
+        if (stats.played === 0) {
+          const demoBtn = document.getElementById('ai-demo-toggle-btn');
+          if (demoBtn) demoBtn.classList.add('first-visit-start-pulse');
+        }
+      }
+
+      window.addEventListener('DOMContentLoaded', () => {
+        renderBadge();
+        initFirstVisitPulse();
+      });
+
+      return {
+        onRoundStart() {
+          roundStartTime = Date.now();
+          const demoBtn = document.getElementById('ai-demo-toggle-btn');
+          if (demoBtn) demoBtn.classList.remove('first-visit-start-pulse');
+        },
+        onRoundEnd(didHumanWin = false) {
+          if (roundStartTime) {
+            stats.totalMs += Math.max(0, Date.now() - roundStartTime);
+            roundStartTime = null;
+          }
+          stats.played += 1;
+          if (didHumanWin) stats.wins += 1;
+          save();
+          renderBadge();
+        },
+        getStats() {
+          return { ...stats };
+        }
+      };
+    })();
   <!-- v6 ONNX Runtime & Browser Bridge -->
   <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/ort.min.js"></script>
   <script src="./onnx-browser-hook.js"></script>
