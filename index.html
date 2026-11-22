@@ -1048,7 +1048,8 @@
     }
 
     function initNewGame(incrementRound = false) {
-      if (incrementRound) gameState.roundNumber++;
+   MahjonggLaunchKit.onRoundStart();
+   if (incrementRound) gameState.roundNumber++;
       cachedPlayerEvaluation = { key: '', data: null };
       const deck = shuffle(buildFullDeck());
       gameState.wall = deck;
@@ -1574,172 +1575,17 @@
       }
 
       if (gameState.phase === 'ROUND_OVER') {
-        startNextRound();
-        showcaseStepTimeout = setTimeout(runSpeechSyncedDemoStep, 700);
-        return;
-      }
+     function startNextRound() {
+   MahjonggLaunchKit.onRoundStart();
+   const modal = document.getElementById('round-modal');
+   modal.classList.add('hidden');
+   modal.classList.remove('flex');
+   initNewGame(true);
+ }
 
-      if (gameState.phase === 'CHARLESTON') {
-        const rec = getPlayerEvaluationCached();
-        const dropNames = rec.rankedDrops.filter(r => !r.tile.isJoker).slice(0, 3).map(r => r.tile.label).join(', ');
-        const targetName = rec.top3[0]?.concrete.patternText || '2026 pattern';
-        setCoachSpeech('Thinking', `🔄 <strong>Charleston Step ${gameState.charlestonStep + 1}/3:</strong> Passing weakest tiles (<em>${dropNames}</em>) to build toward <strong>${targetName}</strong>.`);
-        speakCoachLine(`Charleston pass ${gameState.charlestonStep + 1}. Passing ${dropNames} to build ${targetName}.`, () => {
-          if (!simulatedDemoActive) return;
-          performRecommendedAction();
-          showcaseStepTimeout = setTimeout(runSpeechSyncedDemoStep, 350);
-        });
-        return;
-      }
-
-      if (gameState.phase === 'CLAIM_WINDOW') {
-        if (gameState.pendingWinForPlayer) {
-          const tileLbl = gameState.lastDiscardInfo.tile.label;
-          setCoachSpeech('Proud', `🎉 <strong>Winning Tile Discarded!</strong> Calling <strong>${tileLbl}</strong> to declare Mahjongg!`);
-          speakCoachLine(`Winning tile discarded! Calling ${tileLbl} for Mahjongg!`, () => {
-            if (!simulatedDemoActive) return;
-            performRecommendedAction();
-            showcaseStepTimeout = setTimeout(runSpeechSyncedDemoStep, 500);
-          });
-        } else if (gameState.pendingCallsForPlayer.length > 0) {
-          const tileLbl = gameState.lastDiscardInfo.tile.label;
-          const callLbl = gameState.pendingCallsForPlayer[0].label;
-          setCoachSpeech('Alert', `⚡ <strong>Coach Call:</strong> Claiming <strong>${tileLbl}</strong> for a <strong>${callLbl}</strong>!`);
-          speakCoachLine(`Claiming ${tileLbl} for a ${callLbl}.`, () => {
-            if (!simulatedDemoActive) return;
-            performRecommendedAction();
-            showcaseStepTimeout = setTimeout(runSpeechSyncedDemoStep, 350);
-          });
-        } else {
-          performRecommendedAction();
-          showcaseStepTimeout = setTimeout(runSpeechSyncedDemoStep, 350);
-        }
-        return;
-      }
-
-      if (gameState.phase === 'PLAY' && gameState.turnSeat === 0 && gameState.hasDrawnThisTurn) {
-        const rec = getPlayerEvaluationCached();
-        const targetName = rec.top3[0]?.concrete.patternText || '2026 Hand';
-        const dist = rec.top3[0]?.distance ?? '?';
-        const dropLbl = rec.bestDrop?.label || 'tile';
-        setCoachSpeech(
-          'Happy',
-          `🎯 <strong>Target: ${targetName}</strong> (${dist} away). Discarding <strong>${dropLbl}</strong> — ${rec.rankedDrops[0]?.reason || 'lowest pattern value'}.`
-        );
-        speakCoachLine(`Target ${targetName}, ${dist} away. Discarding ${dropLbl}.`, () => {
-          if (!simulatedDemoActive) return;
-          performRecommendedAction();
-          showcaseStepTimeout = setTimeout(runSpeechSyncedDemoStep, 350);
-        });
-        return;
-      }
-
-      // Wait briefly while AI seats (Evelyn, Marcus, Clara) finish their turns
-      showcaseStepTimeout = setTimeout(runSpeechSyncedDemoStep, 450);
-    }
-
-    function toggleSimulatedCoachDemo() {
-      simulatedDemoActive = !simulatedDemoActive;
-      const btn = document.getElementById('ai-demo-toggle-btn');
-
-      if (simulatedDemoActive) {
-        showcaseStartTime = Date.now();
-        btn.classList.add('ring-2', 'ring-amber-300');
-        document.getElementById('welcome-modal').classList.add('hidden');
-        document.getElementById('welcome-modal').classList.remove('flex');
-
-        setCoachSpeech(
-          'Demo',
-          '🎬 <strong>AI + Coach Tsege Live Session Started!</strong> Watching the 2026 NMJL card, Charleston swaps, and real-time discards.'
-        );
-
-        showcaseClockTimer = setInterval(() => {
-          if (!simulatedDemoActive) return;
-          const elapsed = Date.now() - showcaseStartTime;
-          btn.textContent = `⏹ AI Playing ${formatShowcaseClock(elapsed)} / 03:00`;
-        }, 500);
-
-        speakCoachLine('Welcome! Watch me coach the AI through a full 2026 American Mahjongg game from start to finish.', () => {
-          runSpeechSyncedDemoStep();
-        });
-      } else {
-        btn.textContent = '🤖 AI + Coach Demo';
-        btn.classList.remove('ring-2', 'ring-amber-300');
-        clearInterval(showcaseClockTimer);
-        clearTimeout(showcaseStepTimeout);
-        if ('speechSynthesis' in window) window.speechSynthesis.cancel();
-      }
-    }
-
-   // =========================================================================
-    // 7. ROUND COMPLETION & SCORING
-    // =========================================================================
-    function finishRoundWithWinner(seatIdx, concreteHand, fromDiscard) {
-      gameState.phase = 'ROUND_OVER';
-      MahjonggLaunchKit.onRoundEnd(seatIdx === 0);
-      SoundFX.mahjongg();
-      const seat = gameState.seats[seatIdx];
-      const earnedPts = concreteHand.points * (fromDiscard ? 1 : 2);
-
-      playerStats.handsPlayed++;
-      if (seatIdx === 0) {
-        playerStats.wins++;
-        playerStats.totalPoints += earnedPts;
-        const tier = getHandDifficultyTier(concreteHand);
-        if (tier >= (playerStats.round1TierUnlocked || 1) && playerStats.round1TierUnlocked < 4) {
-          playerStats.round1TierUnlocked++;
-        }
-      }
-      persistPlayerStats(playerStats);
-
-      window.TelemetryLogger.log({
-        game_id: `round_${gameState.roundNumber}`,
-        turn: gameState.discards.length,
-        seat: seatIdx,
-        persona: seatIdx === 0 ? 'human_coached' : 'ai_bot',
-        state: { finalWall: gameState.wall.length },
-        action: { type: 'DECLARE_MAHJONGG', pattern: concreteHand.patternText },
-        outcome: { won_hand: seatIdx === 0 ? 1 : 0, points: earnedPts }
-      });
-
-      document.getElementById('round-modal-icon').textContent = seatIdx === 0 ? '🏆' : '🀄';
-      document.getElementById('round-modal-title').textContent = seatIdx === 0 ? `YOU WON MAHJONGG! (+${earnedPts} pts)` : `${seat.name} Declared Mahjongg!`;
-      document.getElementById('round-modal-subtitle').innerHTML = `Winning 2026 Pattern: <strong>${concreteHand.patternText}</strong> (${concreteHand.section} • ${concreteHand.points} pts${fromDiscard ? '' : ' • Self-Pick 2x Bonus!'})`;
-
-      const tilesBox = document.getElementById('round-modal-tiles');
-      tilesBox.innerHTML = '';
-      const allWinningTiles = [...seat.hand, ...seat.exposures.flatMap(e => e.tiles)];
-      allWinningTiles.forEach(t => tilesBox.appendChild(createTileElement(t, { small: true })));
-
-      const modal = document.getElementById('round-modal');
-      modal.classList.remove('hidden');
-      modal.classList.add('flex');
-      renderAll();
-    }
-
-    function finishRoundWallGame() {
-      gameState.phase = 'ROUND_OVER';
-      MahjonggLaunchKit.onRoundEnd(false);
-      playerStats.handsPlayed++;
-      persistPlayerStats(playerStats);
-      document.getElementById('round-modal-icon').textContent = '🧱';
-      document.getElementById('round-modal-title').textContent = 'Wall Game (Draw)';
-      document.getElementById('round-modal-subtitle').textContent = 'All tiles from the wall were drawn before anyone completed a 2026 pattern. Ready for a fresh deal?';
-      document.getElementById('round-modal-tiles').innerHTML = '';
-      const modal = document.getElementById('round-modal');
-      modal.classList.remove('hidden');
-      modal.classList.add('flex');
-    }
-
-    function startNextRound() {
-      MahjonggLaunchKit.onRoundStart();
-      const modal = document.getElementById('round-modal');
-      modal.classList.add('hidden');
-      modal.classList.remove('flex');
-      initNewGame(true);
-    }
-
-    function confirmNewGame() {
+ function confirmNewGame() {
+   SoundFX.click();
+   initNewGame(false);
       SoundFX.click();
       initNewGame(false);
     }
