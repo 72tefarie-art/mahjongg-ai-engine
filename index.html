@@ -386,7 +386,141 @@
     </div>
   </div>
 
+  <!-- Portfolio Architecture & Live Telemetry Inspector Button -->
+  <button id="archInspectorBtn" onclick="toggleArchModal()" style="
+    position: fixed; bottom: 16px; right: 16px; z-index: 40;
+    background: #0f172a; color: #f8fafc; border: 1px solid #38bdf8;
+    padding: 10px 16px; border-radius: 999px; font-family: system-ui, sans-serif;
+    font-size: 13px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 14px rgba(0,0,0,0.35);">
+    ⚙️ AI Pipeline &amp; Live JSONL
+  </button>
+
+  <!-- Player Win-Rate & Playtime Stats Badge -->
+  <div id="mj-stats-badge" style="
+    position: fixed; bottom: 16px; left: 16px; z-index: 40;
+    background: #0f172a; color: #f8fafc; border: 1px solid #334155;
+    padding: 10px 16px; border-radius: 999px; font-family: system-ui, sans-serif;
+    font-size: 13px; font-weight: 600; box-shadow: 0 4px 14px rgba(0,0,0,0.35);
+    display: inline-flex; align-items: center; gap: 8px;">
+    <span>🏆 <strong id="stat-wins">0</strong>/<span id="stat-played">0</span> (<span id="stat-rate">0%</span>)</span>
+    <span style="color: #64748b;">•</span>
+    <span>⏱️ <span id="stat-time">0m</span></span>
+  </div>
+
+  <!-- Portfolio Architecture & Live Telemetry Inspector Modal -->
+  <div id="archModal" style="
+    display: none; position: fixed; inset: 0; z-index: 60;
+    background: rgba(2, 6, 23, 0.82); backdrop-filter: blur(4px);
+    align-items: center; justify-content: center; padding: 20px; font-family: system-ui, sans-serif;">
+    <div style="
+      background: #0f172a; color: #e2e8f0; border: 1px solid #334155;
+      border-radius: 14px; max-width: 760px; width: 100%; max-height: 88vh;
+      overflow-y: auto; padding: 24px; box-shadow: 0 20px 40px rgba(0,0,0,0.5);">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+        <h2 style="margin: 0; font-size: 18px; color: #38bdf8;">System Architecture &amp; v6 ONNX Pipeline</h2>
+        <button onclick="toggleArchModal()" style="background: none; border: none; color: #94a3b8; font-size: 22px; cursor: pointer;">&times;</button>
+      </div>
+
+      <p style="font-size: 13px; color: #cbd5e1; line-height: 1.5; margin-bottom: 16px;">
+        <strong>Zero-Server Frozen Architecture:</strong> Evaluates ~1,200 combinatorial hand vectors locally, logs structured
+        <code>(State &rarr; Action &rarr; Outcome)</code> JSONL trajectories, and runs v6 persona-trained inference client-side.
+      </p>
+
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 16px; font-size: 12px;">
+        <div style="background: #1e293b; padding: 10px; border-radius: 8px; border-left: 3px solid #38bdf8;">
+          <strong>v1–v2 Rules Core</strong><br><span style="color:#94a3b8;">37 NMJL 2026 patterns + scarcity pruning</span>
+        </div>
+        <div style="background: #1e293b; padding: 10px; border-radius: 8px; border-left: 3px solid #10b981;">
+          <strong>v3–v4 Coach Tsege</strong><br><span style="color:#94a3b8;">Real-time alignment grading &amp; hints</span>
+        </div>
+        <div style="background: #1e293b; padding: 10px; border-radius: 8px; border-left: 3px solid #f59e0b;">
+          <strong>v5 JSONL Logger</strong><br><span style="color:#94a3b8;">Ring-buffered state-action trajectories</span>
+        </div>
+        <div style="background: #1e293b; padding: 10px; border-radius: 8px; border-left: 3px solid #a855f7;">
+          <strong>v6 ONNX Web</strong><br><span style="color:#94a3b8;">Client-side WebAssembly policy hook</span>
+        </div>
+      </div>
+
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+        <span style="font-size: 12px; font-weight: 700; color: #94a3b8;">LIVE TELEMETRY STREAM (LATEST RECORDS)</span>
+        <button onclick="downloadTelemetryJsonl()" style="background: #0284c7; color: #fff; border: none; padding: 5px 12px; border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer;">
+          ⬇ Download .jsonl
+        </button>
+      </div>
+      <pre id="jsonlPreviewBox" style="
+        background: #020617; color: #34d399; border: 1px solid #1e293b;
+        border-radius: 8px; padding: 12px; font-family: 'JetBrains Mono', monospace;
+        font-size: 11px; max-height: 240px; overflow-y: auto; white-space: pre-wrap; margin: 0;"></pre>
+    </div>
+  </div>
+
   <script>
+    // =========================================================================
+    // 0. LAUNCH KIT: ROUND TRACKING, WIN-RATE STATS & FIRST-VISIT PULSE
+    // =========================================================================
+    const MahjonggLaunchKit = (() => {
+      const STORAGE_KEY = 'mj2026_launch_stats_v1';
+      let roundStartTime = null;
+      let stats = { played: 0, wins: 0, totalMs: 0 };
+
+      try {
+        const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
+        if (saved && typeof saved.played === 'number') stats = saved;
+      } catch (_) {}
+
+      function save() {
+        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(stats)); } catch (_) {}
+      }
+
+      function renderBadge() {
+        const playedEl = document.getElementById('stat-played');
+        const winsEl = document.getElementById('stat-wins');
+        const rateEl = document.getElementById('stat-rate');
+        const timeEl = document.getElementById('stat-time');
+        if (!playedEl) return;
+
+        const rate = stats.played > 0 ? Math.round((stats.wins / stats.played) * 100) : 0;
+        const mins = Math.round(stats.totalMs / 60000);
+        playedEl.textContent = stats.played;
+        winsEl.textContent = stats.wins;
+        rateEl.textContent = `${rate}%`;
+        timeEl.textContent = `${mins}m`;
+      }
+
+      function initFirstVisitPulse() {
+        if (stats.played === 0) {
+          const demoBtn = document.getElementById('ai-demo-toggle-btn');
+          if (demoBtn) demoBtn.classList.add('first-visit-start-pulse');
+        }
+      }
+
+      window.addEventListener('DOMContentLoaded', () => {
+        renderBadge();
+        initFirstVisitPulse();
+      });
+
+      return {
+        onRoundStart() {
+          roundStartTime = Date.now();
+          const demoBtn = document.getElementById('ai-demo-toggle-btn');
+          if (demoBtn) demoBtn.classList.remove('first-visit-start-pulse');
+        },
+        onRoundEnd(didHumanWin = false) {
+          if (roundStartTime) {
+            stats.totalMs += Math.max(0, Date.now() - roundStartTime);
+            roundStartTime = null;
+          }
+          stats.played += 1;
+          if (didHumanWin) stats.wins += 1;
+          save();
+          renderBadge();
+        },
+        getStats() {
+          return { ...stats };
+        }
+      };
+    })();
+
     // =========================================================================
     // 1. TELEMETRY RING BUFFER + SOUND FX
     // =========================================================================
@@ -399,11 +533,39 @@
         });
         if (this.buffer.length > 250) this.buffer.shift();
         const modal = document.getElementById('archModal');
-        if (modal && modal.style.display === 'flex' && typeof refreshJsonlPreview === 'function') {
+        if (modal && modal.style.display === 'flex') {
           refreshJsonlPreview();
         }
       }
     };
+
+    function toggleArchModal() {
+      const modal = document.getElementById('archModal');
+      if (!modal) return;
+      const isOpen = modal.style.display === 'flex';
+      modal.style.display = isOpen ? 'none' : 'flex';
+      if (!isOpen) refreshJsonlPreview();
+    }
+
+    function refreshJsonlPreview() {
+      const box = document.getElementById('jsonlPreviewBox');
+      if (!box) return;
+      const recent = window.TelemetryLogger.buffer.slice(-20);
+      box.textContent = recent.length
+        ? recent.map(r => JSON.stringify(r)).join('\n')
+        : '{"status":"ready","msg":"Play or run AI Demo to stream live JSONL records..."}';
+    }
+
+    function downloadTelemetryJsonl() {
+      const lines = window.TelemetryLogger.buffer.map(r => JSON.stringify(r)).join('\n');
+      const blob = new Blob([lines], { type: 'application/x-ndjson' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `mahjongg-2026-telemetry-${Date.now()}.jsonl`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
 
     const SoundFX = {
       enabled: true, ctx: null,
@@ -810,7 +972,6 @@
       return 4;
     }
 
-    // UPGRADE #2: Tile-scarcity awareness (penalizes scarce tiles & marks impossible dead hands)
     function evaluateTilesAgainstConcreteHand(allTiles, exposures, concreteHand, discardFreqMap = null) {
       if (concreteHand.concealed && exposures.length > 0) {
         return { distance: 99, missingCodes: [], keepCodes: new Set(), dead: true, scarcityPenalty: 99 };
@@ -849,7 +1010,6 @@
         counts[g.code] = Math.max(0, (counts[g.code] || 0) - have);
         let deficit = g.count - have;
 
-        // Check if enough live copies exist in wall/other hands to ever complete this group
         const maxCopies = getMaxCopiesInDeck(g.code);
         const discardedCount = dFreq[g.code] || 0;
         const ownedTotal = ownedByCode[g.code] || 0;
@@ -945,7 +1105,6 @@
       return { bestDrop: scoredTiles[0]?.tile || hand[0], rankedDrops: scoredTiles, keepIds, dropIds, top3 };
     }
 
-    // UPGRADE #1: Turn Evaluation Cache for Seat 0
     let cachedPlayerEvaluation = { key: '', data: null };
 
     function getPlayerEvaluationCached() {
@@ -1048,8 +1207,8 @@
     }
 
     function initNewGame(incrementRound = false) {
-   MahjonggLaunchKit.onRoundStart();
-   if (incrementRound) gameState.roundNumber++;
+      MahjonggLaunchKit.onRoundStart();
+      if (incrementRound) gameState.roundNumber++;
       cachedPlayerEvaluation = { key: '', data: null };
       const deck = shuffle(buildFullDeck());
       gameState.wall = deck;
@@ -1444,25 +1603,117 @@
     }
 
     // =========================================================================
-    // 6. SPEECH-SYNCED SELF-RECORDING AI + COACH TSEGE SHOWCASE (3 MIN)
+    // 6. ROUND END & NEXT ROUND HANDLERS
+    // =========================================================================
+    function finishRoundWithWinner(winnerSeat, concreteHand, wasCalledDiscard) {
+      gameState.phase = 'ROUND_OVER';
+      const didHumanWin = winnerSeat === 0;
+      MahjonggLaunchKit.onRoundEnd(didHumanWin);
+
+      playerStats.handsPlayed++;
+      if (didHumanWin) {
+        SoundFX.mahjongg();
+        const pts = concreteHand.points * (wasCalledDiscard ? 1 : 2);
+        playerStats.wins++;
+        playerStats.totalPoints += pts;
+        const tier = getHandDifficultyTier(concreteHand);
+        if (tier >= playerStats.round1TierUnlocked && playerStats.round1TierUnlocked < 4) {
+          playerStats.round1TierUnlocked++;
+        }
+      } else {
+        SoundFX.call();
+      }
+      persistPlayerStats(playerStats);
+
+      window.TelemetryLogger.log({
+        game_id: `round_${gameState.roundNumber}`,
+        turn: gameState.discards.length,
+        seat: winnerSeat,
+        persona: didHumanWin ? 'human_coached' : 'ai_winner',
+        state: { phase: 'ROUND_OVER', pattern: concreteHand.baseId },
+        action: { type: 'MAHJONGG_WIN', called_discard: wasCalledDiscard },
+        outcome: { won_hand: didHumanWin ? 1 : 0, points: concreteHand.points }
+      });
+
+      const iconEl = document.getElementById('round-modal-icon');
+      const titleEl = document.getElementById('round-modal-title');
+      const subEl = document.getElementById('round-modal-subtitle');
+      const tilesEl = document.getElementById('round-modal-tiles');
+
+      if (iconEl) iconEl.textContent = didHumanWin ? '🏆' : '🀄';
+      if (titleEl) titleEl.textContent = didHumanWin ? 'MAHJONGG! You Won!' : `${gameState.seats[winnerSeat].name} Declared Mahjongg!`;
+      if (subEl) {
+        subEl.innerHTML = `Completed <strong>${concreteHand.patternText}</strong> (${concreteHand.section} • ${concreteHand.points} pts${wasCalledDiscard ? '' : ' • Self-Drawn 2x!'}).`;
+      }
+      if (tilesEl) {
+        tilesEl.innerHTML = '';
+        const winSeat = gameState.seats[winnerSeat];
+        winSeat.exposures.forEach(exp => exp.tiles.forEach(t => tilesEl.appendChild(createTileElement(t, { small: true }))));
+        winSeat.hand.forEach(t => tilesEl.appendChild(createTileElement(t, { small: true })));
+      }
+
+      renderAll();
+      if (!simulatedDemoActive) {
+        const modal = document.getElementById('round-modal');
+        if (modal) {
+          modal.classList.remove('hidden');
+          modal.classList.add('flex');
+        }
+      }
+    }
+
+    function finishRoundWallGame() {
+      gameState.phase = 'ROUND_OVER';
+      MahjonggLaunchKit.onRoundEnd(false);
+      playerStats.handsPlayed++;
+      persistPlayerStats(playerStats);
+      SoundFX.click();
+
+      const iconEl = document.getElementById('round-modal-icon');
+      const titleEl = document.getElementById('round-modal-title');
+      const subEl = document.getElementById('round-modal-subtitle');
+      const tilesEl = document.getElementById('round-modal-tiles');
+
+      if (iconEl) iconEl.textContent = '🧱';
+      if (titleEl) titleEl.textContent = 'Wall Game (Draw)';
+      if (subEl) subEl.textContent = 'All 152 tiles were drawn with no Mahjongg declared. Ready for the next deal!';
+      if (tilesEl) tilesEl.innerHTML = '';
+
+      renderAll();
+      if (!simulatedDemoActive) {
+        const modal = document.getElementById('round-modal');
+        if (modal) {
+          modal.classList.remove('hidden');
+          modal.classList.add('flex');
+        }
+      }
+    }
+
+    function startNextRound() {
+      const modal = document.getElementById('round-modal');
+      if (modal) {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+      }
+      initNewGame(true);
+    }
+
+    function confirmNewGame() {
+      SoundFX.click();
+      initNewGame(false);
+    }
+
+    // =========================================================================
+    // 7. SPEECH-SYNCED SELF-RECORDING AI + COACH TSEGE SHOWCASE (3 MIN)
     // =========================================================================
     let simulatedDemoActive = false;
-    let showcaseClockTimer = null;
     let showcaseStepTimeout = null;
     let showcaseStartTime = null;
     let mediaRecorder = null;
     let recordedChunks = [];
     let activeCaptureStream = null;
-    const SHOWCASE_TARGET_MS = 180000; // 3 minutes (within 2-4 minute target)
+    const SHOWCASE_TARGET_MS = 180000;
 
-    function formatShowcaseClock(ms) {
-      const totalSec = Math.floor(ms / 1000);
-      const mins = String(Math.floor(totalSec / 60)).padStart(2, '0');
-      const secs = String(totalSec % 60).padStart(2, '0');
-      return `${mins}:${secs}`;
-    }
-
-    // UPGRADE #3: Speech-synced callback so Coach Tsege never cuts herself off mid-sentence
     function speakCoachLine(plainText, onFinishedCallback = null) {
       if (!('speechSynthesis' in window)) {
         if (onFinishedCallback) setTimeout(onFinishedCallback, 1200);
@@ -1480,7 +1731,6 @@
         if (onFinishedCallback) onFinishedCallback();
       };
 
-      // Safety fallback in case browser speechSynthesis stalls or tab loses focus
       const safetyMs = Math.min(6500, Math.max(1500, plainText.length * 68));
       const fallbackTimer = setTimeout(done, safetyMs);
 
@@ -1494,6 +1744,24 @@
       };
 
       window.speechSynthesis.speak(utter);
+    }
+
+    function toggleSimulatedCoachDemo() {
+      simulatedDemoActive = !simulatedDemoActive;
+      const btn = document.getElementById('ai-demo-toggle-btn');
+      if (simulatedDemoActive) {
+        showcaseStartTime = Date.now();
+        if (btn) btn.textContent = '⏹ Stop AI Demo';
+        const wm = document.getElementById('welcome-modal');
+        if (wm) { wm.classList.add('hidden'); wm.classList.remove('flex'); }
+        setCoachSpeech('Demo', '🤖 <strong>AI + Coach Tsege Demo Active!</strong> Watch South auto-build the top 2026 pattern with live voice commentary.');
+        runSpeechSyncedDemoStep();
+      } else {
+        if (btn) btn.textContent = '🤖 AI + Coach Demo';
+        if (showcaseStepTimeout) clearTimeout(showcaseStepTimeout);
+        if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+        setCoachSpeech('Happy', 'Demo paused—you have full manual control of your rack!');
+      }
     }
 
     async function startSelfRecordingShowcase() {
@@ -1575,19 +1843,47 @@
       }
 
       if (gameState.phase === 'ROUND_OVER') {
-     function startNextRound() {
-   MahjonggLaunchKit.onRoundStart();
-   const modal = document.getElementById('round-modal');
-   modal.classList.add('hidden');
-   modal.classList.remove('flex');
-   initNewGame(true);
- }
+        speakCoachLine('Dealing the next hand to continue our 2026 showcase.', () => {
+          if (!simulatedDemoActive) return;
+          startNextRound();
+          showcaseStepTimeout = setTimeout(runSpeechSyncedDemoStep, 900);
+        });
+        return;
+      }
 
- function confirmNewGame() {
-   SoundFX.click();
-   initNewGame(false);
-      SoundFX.click();
-      initNewGame(false);
+      if (gameState.phase === 'CHARLESTON') {
+        const stepNum = gameState.charlestonStep + 1;
+        speakCoachLine(`Charleston pass ${stepNum} of 3: passing our three lowest-fit tiles.`, () => {
+          if (!simulatedDemoActive) return;
+          executeCharlestonPass(true);
+          showcaseStepTimeout = setTimeout(runSpeechSyncedDemoStep, 900);
+        });
+        return;
+      }
+
+      if (gameState.phase === 'CLAIM_WINDOW') {
+        const tileLabel = gameState.lastDiscardInfo?.tile.label || 'tile';
+        speakCoachLine(`Claim window open on ${tileLabel}. Executing optimal call decision.`, () => {
+          if (!simulatedDemoActive) return;
+          performRecommendedAction();
+          showcaseStepTimeout = setTimeout(runSpeechSyncedDemoStep, 900);
+        });
+        return;
+      }
+
+      if (gameState.phase === 'PLAY' && gameState.turnSeat === 0 && gameState.hasDrawnThisTurn) {
+        const rec = getPlayerEvaluationCached();
+        const dropLabel = rec.bestDrop?.label || 'tile';
+        const pat = rec.top3[0]?.concrete.patternText || '2026 pattern';
+        speakCoachLine(`Building ${pat}. Discarding ${dropLabel}.`, () => {
+          if (!simulatedDemoActive) return;
+          performRecommendedAction();
+          showcaseStepTimeout = setTimeout(runSpeechSyncedDemoStep, 1100);
+        });
+        return;
+      }
+
+      showcaseStepTimeout = setTimeout(runSpeechSyncedDemoStep, 700);
     }
 
     // =========================================================================
@@ -1995,180 +2291,5 @@
     initNewGame(false);
     openWelcomeScreen(false);
   </script>
-// =========================================================================
-    // LAUNCH KIT: ROUND TRACKING, WIN-RATE STATS & FIRST-VISIT PULSE
-    // =========================================================================
-    const MahjonggLaunchKit = (() => {
-      const STORAGE_KEY = 'mj2026_launch_stats_v1';
-      let roundStartTime = null;
-      let stats = { played: 0, wins: 0, totalMs: 0 };
-
-      try {
-        const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
-        if (saved && typeof saved.played === 'number') stats = saved;
-      } catch (_) {}
-
-      function save() {
-        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(stats)); } catch (_) {}
-      }
-
-      function renderBadge() {
-        const playedEl = document.getElementById('stat-played');
-        const winsEl = document.getElementById('stat-wins');
-        const rateEl = document.getElementById('stat-rate');
-        const timeEl = document.getElementById('stat-time');
-        if (!playedEl) return;
-
-        const rate = stats.played > 0 ? Math.round((stats.wins / stats.played) * 100) : 0;
-        const mins = Math.round(stats.totalMs / 60000);
-        playedEl.textContent = stats.played;
-        winsEl.textContent = stats.wins;
-        rateEl.textContent = `${rate}%`;
-        timeEl.textContent = `${mins}m`;
-      }
-
-      function initFirstVisitPulse() {
-        if (stats.played === 0) {
-          const demoBtn = document.getElementById('ai-demo-toggle-btn');
-          if (demoBtn) demoBtn.classList.add('first-visit-start-pulse');
-        }
-      }
-
-      window.addEventListener('DOMContentLoaded', () => {
-        renderBadge();
-        initFirstVisitPulse();
-      });
-
-      return {
-        onRoundStart() {
-          roundStartTime = Date.now();
-          const demoBtn = document.getElementById('ai-demo-toggle-btn');
-          if (demoBtn) demoBtn.classList.remove('first-visit-start-pulse');
-        },
-        onRoundEnd(didHumanWin = false) {
-          if (roundStartTime) {
-            stats.totalMs += Math.max(0, Date.now() - roundStartTime);
-            roundStartTime = null;
-          }
-          stats.played += 1;
-          if (didHumanWin) stats.wins += 1;
-          save();
-          renderBadge();
-        },
-        getStats() {
-          return { ...stats };
-        }
-      };
-    })();
-  <!-- v6 ONNX Runtime & Browser Bridge -->
-  <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/ort.min.js"></script>
-  <script src="./onnx-browser-hook.js"></script>
-
-    <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="theme-color" content="#1e3f35" />
-  <title>2026 American Mahjongg — AI Engine & Coach Tsege</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@600;700;800&display=swap" rel="stylesheet">
-  <style>
-    :root {
-      --felt-center: #326c5b;
-      --felt-edge: #1e463a;
-      --rail-top: #5c341d;
-      --rail-bottom: #381e0f;
-      --rail-border: #251309;
-      --skin-tone-1: #8D5524; /* Warm Caramel / Chestnut */
-      --skin-tone-2: #6F3E1D; /* Rich Umber / Mahogany */
-      --skin-tone-3: #4E2A14; /* Deep Espresso */
-      --skin-tone-4: #361C0E; /* Rich Ebony */
-    }
-    body { font-family: 'Inter', sans-serif; background-color: #26170e; color: #1e293b; user-select: none; overflow-x: hidden; }
-    .table-room { background: radial-gradient(circle at 50% 35%, #3b2416 0%, #1d1109 100%); perspective: 1150px; }
-    .mahogany-frame { background: linear-gradient(180deg, var(--rail-top) 0%, var(--rail-bottom) 100%); border: 4px solid var(--rail-border); border-radius: 26px; box-shadow: 0 24px 48px rgba(0,0,0,0.65), inset 0 2px 3px rgba(255,224,180,0.25), inset 0 -4px 10px rgba(0,0,0,0.6); padding: 12px; position: relative; }
-    .felt-surface { background-color: var(--felt-edge); background-image: radial-gradient(circle at 50% 42%, var(--felt-center) 0%, var(--felt-edge) 100%), repeating-linear-gradient(45deg, rgba(255,255,255,0.015) 0px, rgba(255,255,255,0.015) 2px, transparent 2px, transparent 4px); border-radius: 16px; box-shadow: inset 0 6px 22px rgba(0,0,0,0.55); transform: rotateX(4deg); transform-origin: center bottom; position: relative; overflow: hidden; }
-    .wall-brick { width: 15px; height: 11px; background: linear-gradient(180deg, #347561 0%, #204c3f 100%); border: 1px solid #a7f3d0; border-bottom: 3px solid #132e26; border-radius: 3px; box-shadow: 0 2px 3px rgba(0,0,0,0.45); }
-    .wall-brick-side { width: 11px; height: 14px; background: linear-gradient(90deg, #347561 0%, #204c3f 100%); border: 1px solid #a7f3d0; border-right: 3px solid #132e26; border-radius: 3px; box-shadow: 2px 2px 3px rgba(0,0,0,0.45); }
-    .wooden-rack { background: linear-gradient(180deg, #7c4727 0%, #562f18 55%, #3d200f 100%); border: 2px solid #2b160a; border-top: 3px solid #a6683e; border-radius: 18px; box-shadow: 0 14px 28px rgba(0,0,0,0.55), inset 0 2px 4px rgba(255,220,185,0.25); }
-    .wooden-rack-ledge { background: linear-gradient(180deg, #432311 0%, #68391e 100%); border: 1.5px solid #291409; border-radius: 12px; box-shadow: inset 0 4px 10px rgba(0,0,0,0.55); }
-    .mj-tile { background: linear-gradient(180deg, #ffffff 0%, #fbf9f4 78%, #e8e0cf 100%); border: 1.5px solid #cbd5e1; border-bottom: 5px solid #245244; border-right: 2px solid #94a3b8; border-radius: 9px; box-shadow: 0 4px 7px rgba(15,23,42,0.35); transition: transform 0.16s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.16s ease, border-color 0.16s ease; position: relative; display: inline-flex; flex-direction: column; align-items: center; justify-content: space-between; cursor: pointer; }
-    .mj-tile:hover:not(.mj-small) { transform: translateY(-7px) scale(1.03); box-shadow: 0 10px 18px rgba(15,23,42,0.45); }
-    .mj-tile.selected { transform: translateY(-15px) scale(1.04); border-color: #d97706; border-bottom-color: #b45309; box-shadow: 0 0 0 3px #fbbf24, 0 14px 22px rgba(15,23,42,0.5); }
-    .mj-tile.hint-drop { outline: 2.5px dashed #fb7185; outline-offset: 2px; }
-    .mj-tile.hint-keep { border-top: 4px solid #10b981; }
-    .mj-tile.mj-small { width: 34px; height: 46px; border-bottom-width: 3px; border-radius: 6px; cursor: default; }
-    .mj-tile.mj-rack { width: 50px; height: 70px; }
-    @media (min-width: 768px) { .mj-tile.mj-rack { width: 58px; height: 80px; } }
-    .mj-tile-back { background: linear-gradient(180deg, #33705e 0%, #224d40 100%); border: 1px solid #a7f3d0; border-bottom: 3px solid #143027; border-radius: 5px; box-shadow: 0 2px 4px rgba(0,0,0,0.35); }
-    @keyframes reachDraw { 0% { opacity: 0; transform: translate(70px, 95px) rotate(-18deg) scale(0.92); } 45% { opacity: 0.92; transform: translate(0px, 0px) rotate(-6deg) scale(1); } 100% { opacity: 0; transform: translate(45px, 85px) rotate(-12deg) scale(0.95); } }
-    @keyframes reachDiscard { 0% { opacity: 0; transform: translate(20px, 90px) rotate(12deg) scale(0.92); } 45% { opacity: 0.92; transform: translate(0px, -18px) rotate(4deg) scale(1); } 100% { opacity: 0; transform: translate(35px, 90px) rotate(14deg) scale(0.95); } }
-    .anim-reach-draw { animation: reachDraw 0.52s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
-    .anim-reach-discard { animation: reachDiscard 0.52s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
-    @keyframes pulseCall { 0%, 100% { box-shadow: 0 0 0 0 rgba(251, 191, 36, 0.7); } 50% { box-shadow: 0 0 0 8px rgba(251, 191, 36, 0); } }
-    .pulse-alert { animation: pulseCall 1.4s infinite; }
-    .coach-speech-bubble { position: relative; }
-    .coach-speech-bubble::before { content: ""; position: absolute; left: -10px; top: 18px; width: 0; height: 0; border-top: 8px solid transparent; border-bottom: 8px solid transparent; border-right: 11px solid #fbbf24; }
-    .coach-speech-bubble::after { content: ""; position: absolute; left: -7px; top: 19px; width: 0; height: 0; border-top: 7px solid transparent; border-bottom: 7px solid transparent; border-right: 9px solid #ffffff; }
-    ::-webkit-scrollbar { width: 6px; height: 6px; }
-    ::-webkit-scrollbar-track { background: #e7e2d6; }
-    ::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 9999px; }
-
-    /* 4 Dark Skin-Tone Player Hand Palettes */
-    .player-hand-1, [data-seat="0"] .player-hand { background-color: var(--skin-tone-1); color: #FDF8F5; }
-    .player-hand-2, [data-seat="1"] .player-hand { background-color: var(--skin-tone-2); color: #FDF8F5; }
-    .player-hand-3, [data-seat="2"] .player-hand { background-color: var(--skin-tone-3); color: #FDF8F5; }
-    .player-hand-4, [data-seat="3"] .player-hand { background-color: var(--skin-tone-4); color: #FDF8F5; }
-
-    /* Subtle attention ring on Start Game for first-time visitors */
-    @keyframes startPulse {
-      0%, 100% { box-shadow: 0 0 0 0 rgba(56, 189, 248, 0.55); }
-      50% { box-shadow: 0 0 0 8px rgba(56, 189, 248, 0); }
-    }
-    .first-visit-start-pulse {
-      animation: startPulse 2.2s infinite;
-    }
-  </style>
-</head>
- <!-- Portfolio Architecture & Live Telemetry Inspector Modal -->
-  <button id="archInspectorBtn" onclick="toggleArchModal()" style="
-    position: fixed; bottom: 16px; right: 16px; z-index: 9998;
-    background: #0f172a; color: #f8fafc; border: 1px solid #38bdf8;
-    padding: 10px 16px; border-radius: 999px; font-family: system-ui, sans-serif;
-    font-size: 13px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 14px rgba(0,0,0,0.35);">
-    ⚙️ AI Pipeline &amp; Live JSONL
-  </button>
-
-  <!-- Player Win-Rate & Playtime Stats Badge -->
-  <div id="mj-stats-badge" style="
-    position: fixed; bottom: 16px; left: 16px; z-index: 9998;
-    background: #0f172a; color: #f8fafc; border: 1px solid #334155;
-    padding: 10px 16px; border-radius: 999px; font-family: system-ui, sans-serif;
-    font-size: 13px; font-weight: 600; box-shadow: 0 4px 14px rgba(0,0,0,0.35);
-    display: inline-flex; align-items: center; gap: 8px;">
-    <span>🏆 <strong id="stat-wins">0</strong>/<span id="stat-played">0</span> (<span id="stat-rate">0%</span>)</span>
-    <span style="color: #64748b;">•</span>
-    <span>⏱️ <span id="stat-time">0m</span></span>
-  </div>
-
-  <div id="archModal" style="
-    display: none; position: fixed; inset: 0; z-index: 9999;
-    background: rgba(2, 6, 23, 0.82); backdrop-filter: blur(4px);
-    align-items: center; justify-content: center; padding: 20px; font-family: system-ui, sans-serif;">
-    <div style="
-      background: #0f172a; color: #e2e8f0; border: 1px solid #334155;
-      border-radius: 14px; max-width: 760px; width: 100%; max-height: 88vh;
-      overflow-y: auto; padding: 24px; box-shadow: 0 20px 40px rgba(0,0,0,0.5);">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
-        <h2 style="margin: 0; font-size: 18px; color: #38bdf8;">System Architecture &amp; v6 ONNX Pipeline</h2>
-        <button onclick="toggleArchModal()" style="background: none; border: none; color: #94a3b8; font-size: 22px; cursor: pointer;">&times;</button>
-      </div>
-
-      <p style="font-size: 13px; color: #cbd5e1; line-height: 1.5; margin-bottom: 16px;">
-        <strong>Zero-Server Frozen Architecture:</strong> Evaluates ~1,200 combinatorial hand vectors locally, logs structured
-        <code>(State &rarr; Action &rarr; Outcome)</code> JSONL trajectories, and runs v6 persona-trained inference client-side.
-      </p>
-
-      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 16px; font-size: 12px;">
-        <div style="background: #1e293b; padding: 10px; border-radius: 8px; border-left: 3px solid #38bdf8;">
-          <strong>v1–v2 Rules Core</strong><br><span
-                                                 
+</body>
+</html>
