@@ -1,9 +1,9 @@
-# 🀄 2026 American Mahjongg AI Coach & Game Engine
+# 🀄 2026 American Mahjong AI Coach & Game Engine
 
 **[▶️ Play Live Now (Zero Installs / $0-Server Edge App)](https://72tefarie-art.github.io/mahjongg-ai-engine/)**  
 **[🎥 Watch 60-Second Coach Tsege AI Gameplay Demo](./demo/coach-tsege-demo.mp4)**
 
-A self-contained, client-side **2026 NMJL American Mahjongg** game engine and spoken AI strategy coach powered by a hybrid **Symbolic Rules + ONNX Neural Network** architecture—running 100% in the browser at **$0 hosting cost**.
+A self-contained, client-side **2026 NMJL American Mahjong** game engine and spoken AI strategy coach powered by a hybrid **Symbolic Rules + ONNX Neural Network** architecture—running 100% in the browser at **$0 hosting cost**.
 
 ---
 
