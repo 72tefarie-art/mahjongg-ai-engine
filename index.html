@@ -1,102 +1,1945 @@
-<!-- v6 ONNX Runtime & Browser Bridge -->
-<script src="https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/ort.min.js"></script>
-<script src="./onnx-browser-hook.js"></script>
-
-<!-- Portfolio Architecture & Live Telemetry Inspector Modal -->
-<button id="archInspectorBtn" onclick="toggleArchModal()" style="
-  position: fixed; bottom: 16px; right: 16px; z-index: 9998;
-  background: #0f172a; color: #f8fafc; border: 1px solid #38bdf8;
-  padding: 10px 16px; border-radius: 999px; font-family: system-ui, sans-serif;
-  font-size: 13px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 14px rgba(0,0,0,0.35);">
-  ⚙️ AI Pipeline &amp; Live JSONL
-</button>
-
-<div id="archModal" style="
-  display: none; position: fixed; inset: 0; z-index: 9999;
-  background: rgba(2, 6, 23, 0.82); backdrop-filter: blur(4px);
-  align-items: center; justify-content: center; padding: 20px; font-family: system-ui, sans-serif;">
-  <div style="
-    background: #0f172a; color: #e2e8f0; border: 1px solid #334155;
-    border-radius: 14px; max-width: 760px; width: 100%; max-height: 88vh;
-    overflow-y: auto; padding: 24px; box-shadow: 0 20px 40px rgba(0,0,0,0.5);">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
-      <h2 style="margin: 0; font-size: 18px; color: #38bdf8;">System Architecture &amp; v6 ONNX Pipeline</h2>
-      <button onclick="toggleArchModal()" style="background: none; border: none; color: #94a3b8; font-size: 22px; cursor: pointer;">&times;</button>
-    </div>
-
-    <p style="font-size: 13px; color: #cbd5e1; line-height: 1.5; margin-bottom: 16px;">
-      <strong>Zero-Server Frozen Architecture:</strong> Evaluates ~1,200 combinatorial hand vectors locally, logs structured
-      <code>(State &rarr; Action &rarr; Outcome)</code> JSONL trajectories, and runs v6 persona-trained inference client-side.
-    </p>
-
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 16px; font-size: 12px;">
-      <div style="background: #1e293b; padding: 10px; border-radius: 8px; border-left: 3px solid #38bdf8;">
-        <strong>v1–v2 Rules Core</strong><br><span style="color: #94a3b8;">~1,200 Pattern Vectors &amp; State Rollbacks</span>
-      </div>
-      <div style="background: #1e293b; padding: 10px; border-radius: 8px; border-left: 3px solid #10b981;">
-        <strong>v3–v4 Telemetry</strong><br><span style="color: #94a3b8;">Coach Heuristics &amp; JSONL Ring Buffer</span>
-      </div>
-      <div style="background: #1e293b; padding: 10px; border-radius: 8px; border-left: 3px solid #a855f7;">
-        <strong>v5/v6 Self-Play</strong><br><span style="color: #94a3b8;">3 Bot Personas &rarr; .onnx Browser Model</span>
-      </div>
-    </div>
-
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-      <span style="font-size: 12px; font-weight: 600; color: #94a3b8;">LIVE SESSION TELEMETRY STREAM (JSONL)</span>
-      <button onclick="downloadSampleJsonl()" style="
-        background: #0284c7; color: #fff; border: none; padding: 5px 12px;
-        border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer;">
-        Download Sample .jsonl
-      </button>
-    </div>
-
-    <pre id="liveJsonlPreview" style="
-      background: #020617; color: #34d399; padding: 12px; border-radius: 8px;
-      font-size: 11px; overflow-x: auto; max-height: 210px; border: 1px solid #1e293b; margin: 0;"></pre>
-  </div>
-</div>
-
-<script>
-function toggleArchModal() {
-  const modal = document.getElementById('archModal');
-  const isOpen = modal.style.display === 'flex';
-  modal.style.display = isOpen ? 'none' : 'flex';
-  if (!isOpen) refreshJsonlPreview();
-}
-
-function getSessionTelemetryRecords() {
-  // Pulls live events from your existing TelemetryLogger buffer if present, or shows canonical schema
-  const liveEvents = (window.TelemetryLogger && Array.isArray(window.TelemetryLogger.buffer))
-    ? window.TelemetryLogger.buffer
-    : [];
-  if (liveEvents.length > 0) return liveEvents;
-
-  return [
-    {
-      game_id: "sim_demo_001",
-      turn: 14,
-      seat: 0,
-      persona: "defensive_hoarder",
-      state: { turn: 14, exposedCount: 1, minPatternDistance: 3, jokerCount: 2 },
-      action: { type: "DISCARD", tile: "7_DOT", coach_alignment: "OPTIMAL" },
-      outcome: { won_hand: 1, dealt_in: 0 }
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#1e3f35" />
+  <title>2026 American Mahjongg — AI Engine & Coach Tsege</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --felt-center: #326c5b;
+      --felt-edge: #1e463a;
+      --rail-top: #5c341d;
+      --rail-bottom: #381e0f;
+      --rail-border: #251309;
     }
-  ];
-}
+    body { font-family: 'Inter', sans-serif; background-color: #26170e; color: #1e293b; user-select: none; overflow-x: hidden; }
+    .table-room { background: radial-gradient(circle at 50% 35%, #3b2416 0%, #1d1109 100%); perspective: 1150px; }
+    .mahogany-frame { background: linear-gradient(180deg, var(--rail-top) 0%, var(--rail-bottom) 100%); border: 4px solid var(--rail-border); border-radius: 26px; box-shadow: 0 24px 48px rgba(0,0,0,0.65), inset 0 2px 3px rgba(255,224,180,0.25), inset 0 -4px 10px rgba(0,0,0,0.6); padding: 12px; position: relative; }
+    .felt-surface { background-color: var(--felt-edge); background-image: radial-gradient(circle at 50% 42%, var(--felt-center) 0%, var(--felt-edge) 100%), repeating-linear-gradient(45deg, rgba(255,255,255,0.015) 0px, rgba(255,255,255,0.015) 2px, transparent 2px, transparent 4px); border-radius: 16px; box-shadow: inset 0 6px 22px rgba(0,0,0,0.55); transform: rotateX(4deg); transform-origin: center bottom; position: relative; overflow: hidden; }
+    .wall-brick { width: 15px; height: 11px; background: linear-gradient(180deg, #347561 0%, #204c3f 100%); border: 1px solid #a7f3d0; border-bottom: 3px solid #132e26; border-radius: 3px; box-shadow: 0 2px 3px rgba(0,0,0,0.45); }
+    .wall-brick-side { width: 11px; height: 14px; background: linear-gradient(90deg, #347561 0%, #204c3f 100%); border: 1px solid #a7f3d0; border-right: 3px solid #132e26; border-radius: 3px; box-shadow: 2px 2px 3px rgba(0,0,0,0.45); }
+    .wooden-rack { background: linear-gradient(180deg, #7c4727 0%, #562f18 55%, #3d200f 100%); border: 2px solid #2b160a; border-top: 3px solid #a6683e; border-radius: 18px; box-shadow: 0 14px 28px rgba(0,0,0,0.55), inset 0 2px 4px rgba(255,220,185,0.25); }
+    .wooden-rack-ledge { background: linear-gradient(180deg, #432311 0%, #68391e 100%); border: 1.5px solid #291409; border-radius: 12px; box-shadow: inset 0 4px 10px rgba(0,0,0,0.55); }
+    .mj-tile { background: linear-gradient(180deg, #ffffff 0%, #fbf9f4 78%, #e8e0cf 100%); border: 1.5px solid #cbd5e1; border-bottom: 5px solid #245244; border-right: 2px solid #94a3b8; border-radius: 9px; box-shadow: 0 4px 7px rgba(15,23,42,0.35); transition: transform 0.16s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.16s ease, border-color 0.16s ease; position: relative; display: inline-flex; flex-direction: column; align-items: center; justify-content: space-between; cursor: pointer; }
+    .mj-tile:hover:not(.mj-small) { transform: translateY(-7px) scale(1.03); box-shadow: 0 10px 18px rgba(15,23,42,0.45); }
+    .mj-tile.selected { transform: translateY(-15px) scale(1.04); border-color: #d97706; border-bottom-color: #b45309; box-shadow: 0 0 0 3px #fbbf24, 0 14px 22px rgba(15,23,42,0.5); }
+    .mj-tile.hint-drop { outline: 2.5px dashed #fb7185; outline-offset: 2px; }
+    .mj-tile.hint-keep { border-top: 4px solid #10b981; }
+    .mj-tile.mj-small { width: 34px; height: 46px; border-bottom-width: 3px; border-radius: 6px; cursor: default; }
+    .mj-tile.mj-rack { width: 50px; height: 70px; }
+    @media (min-width: 768px) { .mj-tile.mj-rack { width: 58px; height: 80px; } }
+    .mj-tile-back { background: linear-gradient(180deg, #33705e 0%, #224d40 100%); border: 1px solid #a7f3d0; border-bottom: 3px solid #143027; border-radius: 5px; box-shadow: 0 2px 4px rgba(0,0,0,0.35); }
+    @keyframes reachDraw { 0% { opacity: 0; transform: translate(70px, 95px) rotate(-18deg) scale(0.92); } 45% { opacity: 0.92; transform: translate(0px, 0px) rotate(-6deg) scale(1); } 100% { opacity: 0; transform: translate(45px, 85px) rotate(-12deg) scale(0.95); } }
+    @keyframes reachDiscard { 0% { opacity: 0; transform: translate(20px, 90px) rotate(12deg) scale(0.92); } 45% { opacity: 0.92; transform: translate(0px, -18px) rotate(4deg) scale(1); } 100% { opacity: 0; transform: translate(35px, 90px) rotate(14deg) scale(0.95); } }
+    .anim-reach-draw { animation: reachDraw 0.52s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
+    .anim-reach-discard { animation: reachDiscard 0.52s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
+    @keyframes pulseCall { 0%, 100% { box-shadow: 0 0 0 0 rgba(251, 191, 36, 0.7); } 50% { box-shadow: 0 0 0 8px rgba(251, 191, 36, 0); } }
+    .pulse-alert { animation: pulseCall 1.4s infinite; }
+    .coach-speech-bubble { position: relative; }
+    .coach-speech-bubble::before { content: ""; position: absolute; left: -10px; top: 18px; width: 0; height: 0; border-top: 8px solid transparent; border-bottom: 8px solid transparent; border-right: 11px solid #fbbf24; }
+    .coach-speech-bubble::after { content: ""; position: absolute; left: -7px; top: 19px; width: 0; height: 0; border-top: 7px solid transparent; border-bottom: 7px solid transparent; border-right: 9px solid #ffffff; }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #e7e2d6; }
+    ::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 9999px; }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col">
 
-function refreshJsonlPreview() {
-  const lines = getSessionTelemetryRecords().slice(-5).map(r => JSON.stringify(r)).join('\n');
-  document.getElementById('liveJsonlPreview').textContent = lines;
-}
+  <!-- TOP GAME HUD BAR -->
+  <header class="bg-[#fcfaf5] border-b-2 border-stone-300 px-3 sm:px-4 py-2 flex flex-wrap items-center justify-between gap-2 sticky top-0 z-30 shadow-md">
+    <div class="flex items-center gap-2.5">
+      <div class="w-9 h-9 rounded-xl bg-[#245244] text-amber-300 flex items-center justify-center font-black text-lg shadow-sm border border-amber-400/40">中</div>
+      <div>
+        <div class="flex items-center gap-2">
+          <h1 class="font-extrabold text-sm sm:text-base text-slate-900 leading-tight">2026 Mahjongg AI</h1>
+          <span id="wind-round-badge" class="bg-emerald-900 text-amber-300 font-mono font-bold text-[10px] px-2 py-0.5 rounded-full">EAST • HAND 1/4</span>
+          <span id="round1-ladder-badge" class="bg-amber-200 text-amber-950 border border-amber-400 font-extrabold text-[10px] px-2 py-0.5 rounded-full">Round 1 Ladder • Step 1/4: Tier 1 (Easiest)</span>
+        </div>
+        <p class="text-[11px] text-slate-600 hidden sm:block">Zero-Server 2026 NMJL Engine • Coach Tsege + ONNX Telemetry</p>
+      </div>
+    </div>
 
-function downloadSampleJsonl() {
-  const content = getSessionTelemetryRecords().map(r => JSON.stringify(r)).join('\n') + '\n';
-  const blob = new Blob([content], { type: 'application/x-ndjson' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = 'mahjongg_v6_telemetry_sample.jsonl';
-  a.click();
-  URL.revokeObjectURL(url);
-}
-</script>
+    <div class="flex flex-wrap items-center gap-1.5">
+      <button id="ai-demo-toggle-btn" onclick="toggleSimulatedCoachDemo()" class="bg-sky-950 hover:bg-sky-900 border border-sky-400 text-sky-200 font-extrabold px-2.5 py-1 rounded-lg text-xs shadow transition">
+        🤖 AI + Coach Demo
+      </button>
+      <button id="hud-profile-btn" onclick="openWelcomeScreen(true)" class="bg-stone-100 hover:bg-stone-200 border border-stone-300 px-2.5 py-1 rounded-lg text-xs font-bold text-slate-800 flex items-center gap-1.5 transition">
+        <span class="w-2 h-2 rounded-full bg-emerald-500" id="cloud-status-dot"></span>
+        <span id="hud-player-name">Player</span>
+      </button>
+      <div class="bg-stone-100 border border-stone-300 px-2.5 py-1 rounded-lg text-xs font-semibold text-slate-700">
+        Wall: <span id="wall-count" class="font-mono font-bold text-slate-900">99</span>
+      </div>
+      <button onclick="openProgressModal()" class="bg-amber-50 hover:bg-amber-100 border border-amber-300 px-2.5 py-1 rounded-lg text-xs font-bold text-amber-950 transition">
+        🏆 Leaderboard <span id="hud-rank-pill" class="font-mono bg-amber-200/80 px-1.5 py-0.2 rounded ml-0.5">#--</span>
+      </button>
+      <button id="sound-toggle-btn" onclick="toggleSound()" class="bg-white hover:bg-stone-100 border border-stone-300 text-slate-800 font-bold px-2.5 py-1 rounded-lg text-xs transition">🔊 SFX</button>
+      <button onclick="openOnboardingTour(0)" class="bg-emerald-50 hover:bg-emerald-100 border border-emerald-400 text-emerald-950 font-bold px-2.5 py-1 rounded-lg text-xs transition">🎓 How to Play</button>
+      <button onclick="openCardModal()" class="bg-white hover:bg-stone-100 border border-stone-300 text-slate-800 font-bold px-2.5 py-1 rounded-lg text-xs transition">📋 2026 Card</button>
+      <button onclick="confirmNewGame()" class="bg-stone-200 hover:bg-stone-300 text-slate-800 font-semibold px-2.5 py-1 rounded-lg text-xs transition">↻ Deal</button>
+    </div>
+  </header>
+
+  <!-- MAIN WORKSPACE -->
+  <main class="flex-1 flex flex-col lg:flex-row overflow-hidden">
+    <section class="flex-1 flex flex-col justify-between p-2.5 sm:p-4 gap-2.5 overflow-y-auto table-room">
+      <div class="mahogany-frame flex-1 flex flex-col justify-between">
+        <div class="felt-surface flex-1 flex flex-col justify-between p-2.5 sm:p-3.5 gap-2">
+          <div id="reach-hand-overlay" class="hidden pointer-events-none absolute bottom-3 left-1/2 -translate-x-1/2 z-20">
+            <svg width="110" height="110" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg" class="drop-shadow-2xl">
+              <ellipse cx="62" cy="74" rx="26" ry="30" fill="rgba(15,23,42,0.35)"/>
+              <path d="M44 96C41 78 39 58 43 44C45 38 51 39 51 46V62C52 46 53 33 58 33C63 33 63 46 63 61C65 46 67 35 72 36C76 37 75 49 74 63C77 51 80 43 84 45C88 47 85 62 82 77C79 90 73 102 63 104C52 106 46 102 44 96Z" fill="#E8B48A" stroke="#9A643D" stroke-width="2.5"/>
+              <path d="M35 68C32 62 36 56 41 59L47 68L42 78L35 68Z" fill="#E8B48A" stroke="#9A643D" stroke-width="2.5"/>
+            </svg>
+          </div>
+
+          <!-- TOP WALL + WEST -->
+          <div class="flex flex-col items-center gap-1.5">
+            <div id="table-wall-top" class="flex items-center gap-0.5 opacity-90"></div>
+            <div id="seat-2-box" class="bg-black/30 backdrop-blur-xs border border-white/20 rounded-xl px-3.5 py-1.5 flex flex-col items-center gap-1 transition">
+              <div class="flex items-center gap-2 text-xs text-emerald-50">
+                <span class="text-base">⚡</span><span class="font-bold">Marcus (West)</span>
+                <span class="text-[10px] bg-amber-400/20 text-amber-200 border border-amber-300/30 px-1.5 rounded">Fast Caller</span>
+              </div>
+              <div id="seat-2-hand" class="flex items-center gap-1 flex-wrap justify-center"></div>
+              <div id="seat-2-exposures" class="flex items-center gap-1.5 flex-wrap justify-center"></div>
+            </div>
+          </div>
+
+          <!-- MIDDLE ROW -->
+          <div class="grid grid-cols-1 md:grid-cols-12 gap-2.5 items-center my-auto">
+            <div class="md:col-span-3 flex items-center justify-center gap-2">
+              <div id="table-wall-left" class="hidden md:flex flex-col items-center gap-0.5 opacity-90"></div>
+              <div id="seat-3-box" class="bg-black/30 backdrop-blur-xs border border-white/20 rounded-xl p-2.5 w-full max-w-[215px] flex flex-col items-center gap-1 transition">
+                <div class="flex items-center justify-center w-full text-xs text-emerald-50"><span class="font-bold flex items-center gap-1">🎭 Clara (North)</span></div>
+                <div class="text-[10px] text-purple-200 bg-purple-500/20 border border-purple-300/30 px-1.5 rounded">Concealed Specialist</div>
+                <div id="seat-3-hand" class="flex flex-wrap gap-1 justify-center mt-0.5"></div>
+                <div id="seat-3-exposures" class="flex flex-wrap gap-1 justify-center"></div>
+              </div>
+            </div>
+
+            <div class="md:col-span-6 flex flex-col items-center justify-center bg-black/25 border-2 border-white/15 rounded-2xl p-3 min-h-[195px] shadow-inner">
+              <div class="w-full flex items-center justify-between text-xs text-emerald-100 mb-2">
+                <span class="font-semibold">Center Discards (<span id="discard-count">0</span>)</span>
+                <span id="turn-indicator" class="bg-amber-400 text-slate-950 font-extrabold px-2.5 py-0.5 rounded-full text-[11px] shadow">Step 1: Tile Swap</span>
+              </div>
+              <div id="latest-discard-area" class="hidden w-full bg-[#fcfaf5] text-slate-900 border-2 border-amber-400 rounded-xl p-2.5 mb-2 flex flex-wrap items-center justify-between gap-2 shadow-xl">
+                <div class="flex items-center gap-2.5">
+                  <div id="latest-discard-tile"></div>
+                  <div>
+                    <div class="text-[10px] font-extrabold uppercase tracking-wide text-amber-700">Just Discarded</div>
+                    <div id="latest-discard-label" class="text-sm sm:text-base font-extrabold text-slate-900">3 Bam</div>
+                    <div id="latest-discard-by" class="text-[11px] text-slate-600">Thrown by Evelyn (East)</div>
+                  </div>
+                </div>
+                <div id="claim-actions" class="flex flex-wrap items-center gap-1.5"></div>
+              </div>
+              <div id="discard-river" class="flex flex-wrap gap-1.5 justify-center items-center max-h-[145px] overflow-y-auto w-full p-1">
+                <div class="text-xs text-emerald-100/80 italic py-6">Discarded tiles land here in the center of the felt table.</div>
+              </div>
+            </div>
+
+            <div class="md:col-span-3 flex items-center justify-center gap-2">
+              <div id="seat-1-box" class="bg-black/30 backdrop-blur-xs border border-white/20 rounded-xl p-2.5 w-full max-w-[215px] flex flex-col items-center gap-1 transition">
+                <div class="flex items-center justify-center w-full text-xs text-emerald-50"><span class="font-bold flex items-center gap-1">🛡️ Evelyn (East)</span></div>
+                <div class="text-[10px] text-sky-200 bg-sky-500/20 border border-sky-300/30 px-1.5 rounded">Defensive Reader</div>
+                <div id="seat-1-hand" class="flex flex-wrap gap-1 justify-center mt-0.5"></div>
+                <div id="seat-1-exposures" class="flex flex-wrap gap-1 justify-center"></div>
+              </div>
+              <div id="table-wall-right" class="hidden md:flex flex-col items-center gap-0.5 opacity-90"></div>
+            </div>
+          </div>
+
+          <div class="flex justify-center"><div id="table-wall-bottom" class="flex items-center gap-0.5 opacity-90"></div></div>
+        </div>
+      </div>
+
+      <!-- WOODEN TILE RACK + COACH TSEGE -->
+      <div id="seat-0-box" class="wooden-rack text-amber-50 p-3 sm:p-3.5 relative mt-2">
+        <div class="flex items-start gap-3 mb-2.5 bg-amber-950/65 border border-amber-300/30 rounded-2xl p-2.5 shadow-md">
+          <div class="flex flex-col items-center shrink-0">
+            <div id="coach-avatar-wrap" class="w-14 h-14 rounded-2xl bg-gradient-to-br from-pink-100 via-amber-50 to-emerald-100 border-2 border-amber-400 shadow-lg flex items-center justify-center relative">
+              <span id="coach-emoji-face" class="text-4xl leading-none select-none">💁🏾‍♀️</span>
+            </div>
+            <span class="text-[10px] font-black text-amber-300 mt-1 tracking-tight">Coach Tsege</span>
+            <span id="coach-mood-tag" class="text-[9px] font-extrabold bg-emerald-100 text-emerald-900 border border-emerald-300 px-1.5 py-0.2 rounded-full mt-0.5">Ready</span>
+          </div>
+
+          <div class="flex-1 min-w-0">
+            <div id="coach-message" class="coach-speech-bubble bg-white text-slate-900 border-2 border-amber-400 rounded-2xl px-3.5 py-2.5 text-xs sm:text-[13px] leading-relaxed font-medium shadow-md">
+              Loading Coach Tsege...
+            </div>
+            <div class="flex flex-wrap items-center justify-between gap-2 mt-1.5 px-1">
+              <span class="text-[10px] text-amber-200/90 font-semibold">Seated beside your rack • Live 2026 Reads</span>
+              <div class="flex items-center gap-1.5">
+                <button id="practice-mode-btn" onclick="togglePracticeMode()" class="bg-emerald-700 hover:bg-emerald-600 text-white border border-emerald-500 font-bold px-2 py-0.5 rounded-md text-[10px] transition">💡 Hints Shown</button>
+                <button id="peek-hint-btn" onclick="revealHintsForOneTurn()" class="hidden bg-amber-300 hover:bg-amber-200 text-slate-950 font-bold px-2 py-0.5 rounded-md text-[10px] transition">💡 Ask Tsege</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-2.5 pb-2 border-b border-amber-200/20">
+          <div class="flex items-center gap-2">
+            <span id="player-seat-badge" class="px-2.5 py-0.5 rounded-md bg-amber-400 text-slate-950 font-black text-xs shadow-xs">YOUR RACK (SOUTH)</span>
+            <span id="player-tile-count" class="text-xs font-semibold text-amber-100/90">14 tiles</span>
+          </div>
+          <div id="seat-0-exposures" class="flex items-center gap-2 flex-wrap"></div>
+          <div id="player-actions" class="flex flex-wrap items-center gap-2"></div>
+        </div>
+
+        <div id="charleston-bar" class="hidden bg-[#fcfaf5] text-slate-900 border-2 border-amber-400 rounded-xl p-2.5 mb-2 flex flex-wrap items-center justify-between gap-2 shadow">
+          <div>
+            <div class="text-xs sm:text-sm font-extrabold text-amber-950" id="charleston-step-title">Tile Swap (Charleston) — Pass 3 Tiles Right</div>
+            <p id="charleston-step-desc" class="text-xs text-slate-700 mt-0.5">Tap 3 Red-Dashed tiles to pass, or click "Auto-Swap Best 3". Jokers can never be passed.</p>
+          </div>
+          <div id="charleston-buttons" class="flex items-center gap-2"></div>
+        </div>
+
+        <div id="next-step-banner" class="hidden mb-2 bg-amber-300 text-slate-950 rounded-xl px-3 py-2 flex flex-wrap items-center justify-between gap-2 shadow">
+          <span id="next-step-text" class="text-xs sm:text-sm font-black">👉 YOUR TURN: Draw or throw a tile</span>
+          <button id="do-it-for-me-btn" onclick="performRecommendedAction()" class="bg-slate-900 hover:bg-slate-800 text-amber-300 font-extrabold px-3 py-1 rounded-lg text-xs shadow transition">
+            ✨ Do Best Move For Me
+          </button>
+        </div>
+
+        <div class="wooden-rack-ledge px-2.5 py-2.5 flex flex-col items-center">
+          <div id="player-rack" class="flex flex-wrap items-end justify-center gap-1.5 sm:gap-2 min-h-[82px] py-1"></div>
+          <div class="flex flex-wrap items-center justify-between gap-2 w-full mt-2 pt-2 border-t border-amber-200/15 text-[11px] text-amber-100/80">
+            <div id="rack-legend-area" class="flex items-center gap-3"></div>
+            <div class="flex items-center gap-2 font-bold text-amber-300">
+              <button onclick="sortPlayerHand('suit')" class="hover:underline">Group by Suit</button>
+              <span>•</span>
+              <button onclick="sortPlayerHand('rank')" class="hover:underline">Group by Number</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- RIGHT SIDEBAR -->
+    <aside class="w-full lg:w-[390px] bg-[#fcfaf5] border-t-2 lg:border-t-0 lg:border-l-2 border-stone-300 flex flex-col max-h-[58vh] lg:max-h-[calc(100vh-58px)]">
+      <div id="post-move-critique" class="hidden m-3 mb-0 rounded-xl p-2.5 border-2 text-xs leading-relaxed space-y-1.5 shadow-xs">
+        <div class="flex items-center justify-between gap-2">
+          <span id="critique-grade-badge" class="font-bold text-[11px] px-2 py-0.5 rounded uppercase">GREAT MOVE</span>
+          <span id="critique-move-label" class="text-[11px] font-semibold text-slate-600">Last Move</span>
+        </div>
+        <div id="critique-comparison" class="hidden bg-white/85 rounded-lg p-2 border border-stone-300 text-[11px] space-y-0.5"></div>
+        <p id="critique-explanation" class="text-slate-800"></p>
+        <div id="critique-actions" class="flex flex-wrap items-center gap-2 pt-0.5"></div>
+      </div>
+
+      <div class="flex-1 overflow-y-auto p-3.5 space-y-2.5 bg-stone-50">
+        <div class="flex items-center justify-between">
+          <div>
+            <h3 class="font-extrabold text-xs uppercase tracking-wider text-slate-800">🎯 3 Ways to Win THIS Hand</h3>
+            <p class="text-[10px] text-slate-500">Pick 1 pattern to build right now (tap to lock)</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <button id="unlock-hand-btn" onclick="unlockTargetHand()" class="hidden text-xs bg-amber-200 text-amber-950 font-bold px-2 py-0.5 rounded hover:bg-amber-300">Unlock</button>
+            <button onclick="openCardModal()" class="text-xs text-[#245244] font-bold hover:underline">All 37 →</button>
+          </div>
+        </div>
+        <div id="top-hands-list" class="space-y-2"></div>
+      </div>
+    </aside>
+  </main>
+
+  <!-- MODAL 0: WELCOME SPLASH -->
+  <div id="welcome-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-3 overflow-y-auto">
+    <div class="bg-[#fcfaf5] border-2 border-amber-500 rounded-3xl w-full max-w-xl p-5 sm:p-6 shadow-2xl space-y-4 my-auto">
+      <div class="flex items-start gap-3.5 bg-gradient-to-r from-[#1e463a] to-[#2b6251] text-white p-4 rounded-2xl border border-amber-400/40 shadow-md">
+        <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-pink-100 via-amber-50 to-emerald-100 border-2 border-amber-400 flex items-center justify-center shrink-0 shadow-lg">
+          <span class="text-4xl">💁🏾‍♀️</span>
+        </div>
+        <div>
+          <span class="text-[10px] font-black uppercase tracking-wider bg-amber-400 text-slate-950 px-2 py-0.5 rounded-full">2026 NMJL Edition</span>
+          <h2 class="text-lg sm:text-xl font-black mt-1 leading-tight">Welcome to 2026 American Mahjongg!</h2>
+          <p class="text-xs text-emerald-100 mt-1 leading-relaxed">
+            "I'm <strong>Coach Tsege</strong>—I'll sit right beside your rack, highlight your keepers, and stream live AI telemetry!"
+          </p>
+        </div>
+      </div>
+
+      <div class="bg-white border-2 border-stone-200 rounded-2xl p-4 space-y-3">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-extrabold uppercase tracking-wider text-slate-700">👤 Player Profile & Cross-Device Sync</span>
+          <span id="welcome-sync-badge" class="text-[11px] font-bold bg-emerald-100 text-emerald-900 px-2 py-0.5 rounded-full">☁️ Cloud Sync Ready</span>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+          <div>
+            <label for="player-name-input" class="block text-[11px] font-bold text-slate-700 mb-1">Your Leaderboard Name</label>
+            <input id="player-name-input" type="text" maxlength="22" placeholder="Enter your name..." class="w-full px-3 py-2 rounded-xl border-2 border-stone-300 focus:border-[#245244] focus:outline-none text-sm font-bold text-slate-900 bg-stone-50" />
+          </div>
+          <div>
+            <label for="player-email-input" class="block text-[11px] font-bold text-slate-700 mb-1">Email (Syncs Laptop & Phone)</label>
+            <input id="player-email-input" type="email" placeholder="you@email.com" class="w-full px-3 py-2 rounded-xl border-2 border-stone-300 focus:border-[#245244] focus:outline-none text-sm font-semibold text-slate-900 bg-stone-50" />
+          </div>
+        </div>
+        <div class="flex flex-wrap items-center justify-between gap-2 pt-1">
+          <button id="google-link-btn" onclick="signInWithGoogleAccount()" class="bg-white hover:bg-stone-100 border border-stone-300 text-slate-800 font-bold px-3 py-1.5 rounded-xl text-xs flex items-center gap-1.5 shadow-2xs transition">
+            <span>🔐</span> <span id="google-link-label">Connect Google Account</span>
+          </button>
+          <button onclick="savePlayerProfileFromWelcome()" class="bg-emerald-100 hover:bg-emerald-200 text-emerald-950 font-extrabold px-3 py-1.5 rounded-xl text-xs transition">💾 Save Name & Sync Stats</button>
+        </div>
+        <p id="welcome-sync-note" class="text-[11px] text-slate-500">Enter the same email on any phone or laptop to keep your name, score, and leaderboard rank synced.</p>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+        <button onclick="startTourFromWelcome()" class="bg-amber-400 hover:bg-amber-300 text-slate-950 font-black px-4 py-3 rounded-2xl text-xs sm:text-sm shadow-md border-2 border-amber-500 transition flex items-center justify-center gap-2">
+          <span>🎓 Quick 4-Step Tour</span><span class="text-[10px] bg-slate-900 text-amber-300 px-1.5 py-0.5 rounded">1 Min</span>
+        </button>
+        <button onclick="enterTableFromWelcome()" class="bg-[#245244] hover:bg-[#1a3e33] text-white font-extrabold px-4 py-3 rounded-2xl text-xs sm:text-sm shadow-md transition flex items-center justify-center gap-2">
+          <span>🀄 Jump Straight to Table →</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 0B: TOUR -->
+  <div id="walkthrough-modal" class="hidden fixed inset-0 z-50 bg-black/75 items-center justify-center p-3">
+    <div class="bg-[#fcfaf5] border-2 border-amber-500 rounded-3xl w-full max-w-lg p-5 shadow-2xl space-y-4">
+      <div class="flex items-center justify-between border-b border-stone-200 pb-2.5">
+        <div class="flex items-center gap-2">
+          <span id="tour-step-badge" class="bg-[#245244] text-amber-300 font-mono font-bold text-xs px-2.5 py-0.5 rounded-full">Step 1 of 4</span>
+          <h2 id="tour-step-title" class="font-black text-base text-slate-900">Your Goal & Color-Coded Tiles</h2>
+        </div>
+        <button onclick="closeOnboardingTour()" class="text-slate-500 hover:text-slate-900 font-bold text-sm px-2">✕</button>
+      </div>
+      <div id="tour-step-body" class="min-h-[215px] flex flex-col justify-between"></div>
+      <div class="flex items-center justify-between pt-2 border-t border-stone-200">
+        <button id="tour-prev-btn" onclick="stepOnboardingTour(-1)" class="bg-stone-200 hover:bg-stone-300 text-slate-800 font-bold px-3.5 py-2 rounded-xl text-xs transition">← Back</button>
+        <div id="tour-dots" class="flex items-center gap-1.5"></div>
+        <button id="tour-next-btn" onclick="stepOnboardingTour(1)" class="bg-[#245244] hover:bg-[#1b3f34] text-white font-extrabold px-4 py-2 rounded-xl text-xs shadow transition">Next Step →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 1: FULL 2026 CARD -->
+  <div id="card-modal" class="hidden fixed inset-0 z-50 bg-black/65 items-center justify-center p-3">
+    <div class="bg-[#fcfaf5] border-2 border-stone-400 rounded-2xl w-full max-w-4xl max-h-[88vh] flex flex-col shadow-2xl overflow-hidden">
+      <div class="px-4 py-3 bg-stone-200 border-b border-stone-300 flex items-center justify-between">
+        <div>
+          <h2 class="font-extrabold text-base text-slate-900">2026 American Mahjongg Official Reference Card</h2>
+          <p class="text-xs text-slate-600">37 hands • Tap any hand to lock it as your target</p>
+        </div>
+        <button onclick="closeCardModal()" class="bg-white border border-stone-400 px-3 py-1 rounded-lg text-xs font-bold hover:bg-stone-100">✕ Close</button>
+      </div>
+      <div id="full-card-body" class="p-4 overflow-y-auto space-y-4"></div>
+    </div>
+  </div>
+
+  <!-- MODAL 2: PROGRESS & LEADERBOARD -->
+  <div id="progress-modal" class="hidden fixed inset-0 z-50 bg-black/65 items-center justify-center p-3">
+    <div class="bg-[#fcfaf5] border-2 border-stone-400 rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+      <div class="px-4 py-3 bg-amber-100 border-b border-amber-300 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <span class="text-xl">🏆</span>
+          <div>
+            <h2 class="font-extrabold text-base text-amber-950">Player Progress & Global Leaderboard</h2>
+            <p class="text-xs text-amber-900">Synced profile stats, Round 1 Ladder, and live standings</p>
+          </div>
+        </div>
+        <button onclick="closeProgressModal()" class="bg-white border border-amber-300 px-3 py-1 rounded-lg text-xs font-bold hover:bg-amber-50">✕ Close</button>
+      </div>
+      <div id="progress-body" class="p-4 overflow-y-auto space-y-4 text-xs"></div>
+    </div>
+  </div>
+
+  <!-- MODAL 3: ROUND RESULT -->
+  <div id="round-modal" class="hidden fixed inset-0 z-50 bg-black/75 items-center justify-center p-4">
+    <div class="bg-[#fcfaf5] border-2 border-stone-400 rounded-2xl w-full max-w-lg p-5 shadow-2xl space-y-4 text-center">
+      <div id="round-modal-icon" class="text-4xl">🀄</div>
+      <h2 id="round-modal-title" class="text-xl font-extrabold text-slate-900">Mahjongg!</h2>
+      <p id="round-modal-subtitle" class="text-sm text-slate-700 leading-relaxed"></p>
+      <div id="round-modal-tiles" class="flex flex-wrap justify-center gap-1.5 bg-stone-100 p-3 rounded-xl border border-stone-300"></div>
+      <div class="flex justify-center gap-3 pt-2">
+        <button onclick="startNextRound()" class="bg-[#245244] hover:bg-[#1a3e33] text-white font-extrabold px-5 py-2.5 rounded-xl text-sm shadow">Play Next Hand →</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // =========================================================================
+    // 1. TELEMETRY RING BUFFER + SOUND FX
+    // =========================================================================
+    window.TelemetryLogger = {
+      buffer: [],
+      log(record) {
+        this.buffer.push({
+          ts: new Date().toISOString(),
+          ...record
+        });
+        if (this.buffer.length > 250) this.buffer.shift();
+        const modal = document.getElementById('archModal');
+        if (modal && modal.style.display === 'flex' && typeof refreshJsonlPreview === 'function') {
+          refreshJsonlPreview();
+        }
+      }
+    };
+
+    const SoundFX = {
+      enabled: true, ctx: null,
+      ensureContext() { if (!this.ctx) { const AC = window.AudioContext || window.webkitAudioContext; if (AC) this.ctx = new AC(); } if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume(); },
+      playTone(freq, dur, type = 'sine', gainVal = 0.08, delay = 0) {
+        if (!this.enabled) return; this.ensureContext(); if (!this.ctx) return;
+        const now = this.ctx.currentTime + delay; const osc = this.ctx.createOscillator(); const gain = this.ctx.createGain();
+        osc.type = type; osc.frequency.setValueAtTime(freq, now);
+        gain.gain.setValueAtTime(0.001, now); gain.gain.exponentialRampToValueAtTime(gainVal, now + 0.012); gain.gain.exponentialRampToValueAtTime(0.0001, now + dur);
+        osc.connect(gain); gain.connect(this.ctx.destination); osc.start(now); osc.stop(now + dur + 0.02);
+      },
+      click() { this.playTone(620, 0.06, 'triangle', 0.09); },
+      clack() { this.playTone(340, 0.08, 'square', 0.08); this.playTone(880, 0.05, 'triangle', 0.06, 0.015); },
+      draw() { this.playTone(460, 0.07, 'sine', 0.07); this.playTone(580, 0.08, 'triangle', 0.06, 0.03); },
+      call() { this.playTone(523.25, 0.14, 'triangle', 0.11); this.playTone(659.25, 0.18, 'triangle', 0.11, 0.09); },
+      mahjongg() { [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => this.playTone(f, 0.28, 'triangle', 0.12, i * 0.11)); }
+    };
+    function toggleSound() {
+      SoundFX.enabled = !SoundFX.enabled;
+      const btn = document.getElementById('sound-toggle-btn');
+      if (btn) btn.textContent = SoundFX.enabled ? '🔊 SFX' : '🔇 Muted';
+      if (SoundFX.enabled) SoundFX.click();
+    }
+
+    // =========================================================================
+    // 2. CLOUD SYNC & LEADERBOARD
+    // =========================================================================
+    const CLOUD_SYNC_CONFIG = { endpoint: '', apiKey: '' };
+    const DEFAULT_STATS = {
+      playerName: 'Player', playerEmail: '', googleLinked: false,
+      handsPlayed: 0, wins: 0, totalPoints: 0, totalDecisions: 0, optimalDecisions: 0,
+      round1TierUnlocked: 1, tier1Wins: 0, tier2Wins: 0, tier3Wins: 0, tier4Wins: 0,
+      lastSyncedAt: null
+    };
+    const SEEDED_PLAYERS = [
+      { id: 'bot-evelyn', name: 'Evelyn (East AI)', badge: '🛡️ Defensive Reader', points: 245, wins: 7, accuracy: 86, isBot: true },
+      { id: 'bot-clara', name: 'Clara (North AI)', badge: '🎭 Concealed Pro', points: 210, wins: 6, accuracy: 83, isBot: true },
+      { id: 'bot-marcus', name: 'Marcus (West AI)', badge: '⚡ Fast Caller', points: 175, wins: 5, accuracy: 79, isBot: true },
+      { id: 'peer-ruth', name: 'Ruth M. (NYC)', badge: '🀄 League Regular', points: 140, wins: 4, accuracy: 81, isBot: false },
+      { id: 'peer-david', name: 'David K. (Boca)', badge: '✨ Charleston Ace', points: 95, wins: 3, accuracy: 74, isBot: false },
+      { id: 'peer-hannah', name: 'Hannah S. (LA)', badge: '🌱 Rising Player', points: 50, wins: 2, accuracy: 68, isBot: false }
+    ];
+
+    function normalizeEmailKey(email) { return (email || '').trim().toLowerCase(); }
+    function getProfileStorageKey(email) {
+      const clean = normalizeEmailKey(email);
+      return clean ? `mj2026_profile_${clean}` : 'mj2026_player_stats_v3';
+    }
+    function loadPlayerStats() {
+      try {
+        const lastEmail = localStorage.getItem('mj2026_last_email') || '';
+        const key = getProfileStorageKey(lastEmail);
+        const raw = localStorage.getItem(key) || localStorage.getItem('mj2026_player_stats_v3');
+        if (!raw) return { ...DEFAULT_STATS };
+        return { ...DEFAULT_STATS, ...JSON.parse(raw) };
+      } catch (e) { return { ...DEFAULT_STATS }; }
+    }
+    let playerStats = loadPlayerStats();
+
+    async function persistPlayerStats(statsObj) {
+      playerStats = { ...DEFAULT_STATS, ...statsObj, lastSyncedAt: new Date().toISOString() };
+      const cleanEmail = normalizeEmailKey(playerStats.playerEmail);
+      try {
+        localStorage.setItem('mj2026_player_stats_v3', JSON.stringify(playerStats));
+        if (cleanEmail) {
+          localStorage.setItem('mj2026_last_email', cleanEmail);
+          localStorage.setItem(getProfileStorageKey(cleanEmail), JSON.stringify(playerStats));
+        }
+      } catch (e) {}
+      if (CLOUD_SYNC_CONFIG.endpoint && cleanEmail) {
+        try {
+          await fetch(CLOUD_SYNC_CONFIG.endpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...(CLOUD_SYNC_CONFIG.apiKey ? { Authorization: `Bearer ${CLOUD_SYNC_CONFIG.apiKey}` } : {}) },
+            body: JSON.stringify({ email: cleanEmail, profile: playerStats })
+          });
+        } catch (err) {}
+      }
+      updateHudIdentityAndRank();
+    }
+
+    async function hydrateProfileByEmail(email) {
+      const clean = normalizeEmailKey(email);
+      if (!clean) return false;
+      localStorage.setItem('mj2026_last_email', clean);
+      if (CLOUD_SYNC_CONFIG.endpoint) {
+        try {
+          const res = await fetch(`${CLOUD_SYNC_CONFIG.endpoint}?email=${encodeURIComponent(clean)}`, {
+            headers: CLOUD_SYNC_CONFIG.apiKey ? { Authorization: `Bearer ${CLOUD_SYNC_CONFIG.apiKey}` } : {}
+          });
+          if (res.ok) {
+            const remote = await res.json();
+            if (remote && remote.profile) {
+              playerStats = { ...DEFAULT_STATS, ...remote.profile, playerEmail: clean };
+              localStorage.setItem(getProfileStorageKey(clean), JSON.stringify(playerStats));
+              updateHudIdentityAndRank();
+              return true;
+            }
+          }
+        } catch (e) {}
+      }
+      const saved = localStorage.getItem(getProfileStorageKey(clean));
+      if (saved) {
+        playerStats = { ...DEFAULT_STATS, ...JSON.parse(saved), playerEmail: clean };
+        updateHudIdentityAndRank();
+        return true;
+      }
+      return false;
+    }
+
+    function computeLeaderboardStandings() {
+      const acc = playerStats.totalDecisions > 0 ? Math.round((playerStats.optimalDecisions / playerStats.totalDecisions) * 100) : 0;
+      const me = {
+        id: 'me',
+        name: `${playerStats.playerName || 'Player'} (You)`,
+        badge: playerStats.googleLinked ? '🔐 Google Verified' : (playerStats.playerEmail ? '☁️ Synced' : '⭐ Active Learner'),
+        points: playerStats.totalPoints,
+        wins: playerStats.wins,
+        accuracy: acc,
+        isMe: true
+      };
+      const all = [...SEEDED_PLAYERS, me].sort((a, b) => (b.points - a.points) || (b.wins - a.wins) || (b.accuracy - a.accuracy));
+      const myRank = all.findIndex(p => p.isMe) + 1;
+      return { all, myRank };
+    }
+
+    function updateHudIdentityAndRank() {
+      const nameEl = document.getElementById('hud-player-name');
+      const rankEl = document.getElementById('hud-rank-pill');
+      const dotEl = document.getElementById('cloud-status-dot');
+      if (nameEl) nameEl.textContent = playerStats.playerName || 'Player';
+      const { myRank } = computeLeaderboardStandings();
+      if (rankEl) rankEl.textContent = `#${myRank}`;
+      if (dotEl) dotEl.className = `w-2 h-2 rounded-full ${playerStats.playerEmail ? 'bg-emerald-500' : 'bg-amber-400'}`;
+      updateRound1LadderBadge();
+    }
+
+    function updateRound1LadderBadge() {
+      const badge = document.getElementById('round1-ladder-badge');
+      if (!badge) return;
+      const tier = Math.min(4, Math.max(1, playerStats.round1TierUnlocked || 1));
+      const labels = {
+        1: 'Round 1 Ladder • Step 1/4: Tier 1 (Easiest)',
+        2: 'Round 1 Ladder • Step 2/4: Tier 2 (Consecutive)',
+        3: 'Round 1 Ladder • Step 3/4: Tier 3 (Singles & Pairs)',
+        4: 'Round 1 Ladder • Step 4/4: Tier 4 (Master)'
+      };
+      badge.textContent = labels[tier];
+    }
+
+    function openWelcomeScreen(isEditing = false) {
+      const modal = document.getElementById('welcome-modal');
+      const nameInput = document.getElementById('player-name-input');
+      const emailInput = document.getElementById('player-email-input');
+      if (nameInput) nameInput.value = playerStats.playerName && playerStats.playerName !== 'Player' ? playerStats.playerName : '';
+      if (emailInput) emailInput.value = playerStats.playerEmail || '';
+      updateGoogleSyncUI();
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+      if (isEditing) SoundFX.click();
+    }
+
+    function updateGoogleSyncUI() {
+      const label = document.getElementById('google-link-label');
+      const badge = document.getElementById('welcome-sync-badge');
+      if (playerStats.googleLinked) {
+        if (label) label.textContent = `Connected: ${playerStats.playerEmail}`;
+        if (badge) badge.textContent = '✅ Google Account Synced';
+      } else if (playerStats.playerEmail) {
+        if (label) label.textContent = 'Connect Google Account';
+        if (badge) badge.textContent = `☁️ Synced: ${playerStats.playerEmail}`;
+      }
+    }
+
+    async function savePlayerProfileFromWelcome(silent = false) {
+      const rawName = (document.getElementById('player-name-input')?.value || '').trim();
+      const rawEmail = normalizeEmailKey(document.getElementById('player-email-input')?.value || '');
+      if (rawEmail && rawEmail !== normalizeEmailKey(playerStats.playerEmail)) {
+        const found = await hydrateProfileByEmail(rawEmail);
+        if (found && !rawName && document.getElementById('player-name-input')) {
+          document.getElementById('player-name-input').value = playerStats.playerName;
+        }
+      }
+      const nextName = rawName || playerStats.playerName || 'Player';
+      await persistPlayerStats({ ...playerStats, playerName: nextName, playerEmail: rawEmail || playerStats.playerEmail });
+      updateGoogleSyncUI();
+      if (!silent) {
+        SoundFX.call();
+        const note = document.getElementById('welcome-sync-note');
+        if (note) {
+          note.textContent = rawEmail
+            ? `✅ Saved "${nextName}" and synced to ${rawEmail}. Use this email on any device!`
+            : `✅ Saved "${nextName}" on this device! Add an email anytime for cross-device sync.`;
+          note.className = 'text-[11px] font-bold text-emerald-800';
+        }
+      }
+    }
+
+    async function signInWithGoogleAccount() {
+      SoundFX.click();
+      const currentEmail = normalizeEmailKey(document.getElementById('player-email-input')?.value || playerStats.playerEmail);
+      const entered = window.prompt('Enter your Google Gmail address to link and sync your profile across devices:', currentEmail || '');
+      if (!entered) return;
+      const clean = normalizeEmailKey(entered);
+      if (!clean.includes('@')) return;
+      document.getElementById('player-email-input').value = clean;
+      await hydrateProfileByEmail(clean);
+      const typedName = (document.getElementById('player-name-input')?.value || '').trim();
+      const autoName = typedName || (playerStats.playerName !== 'Player' ? playerStats.playerName : clean.split('@')[0].replace(/[^a-zA-Z0-9]/g, ' ').trim());
+      document.getElementById('player-name-input').value = autoName;
+      await persistPlayerStats({ ...playerStats, playerName: autoName || 'Player', playerEmail: clean, googleLinked: true });
+      updateGoogleSyncUI();
+      SoundFX.call();
+      const note = document.getElementById('welcome-sync-note');
+      if (note) {
+        note.textContent = `✅ Google account (${clean}) linked! Your leaderboard stats will follow you everywhere.`;
+        note.className = 'text-[11px] font-bold text-emerald-800';
+      }
+    }
+
+    async function startTourFromWelcome() {
+      await savePlayerProfileFromWelcome(true);
+      document.getElementById('welcome-modal').classList.add('hidden');
+      document.getElementById('welcome-modal').classList.remove('flex');
+      openOnboardingTour(0);
+    }
+
+    async function enterTableFromWelcome() {
+      await savePlayerProfileFromWelcome(true);
+      document.getElementById('welcome-modal').classList.add('hidden');
+      document.getElementById('welcome-modal').classList.remove('flex');
+      SoundFX.draw();
+    }
+
+    // =========================================================================
+    // 3. TILE DEFINITIONS & 2026 NMJL CARD (ALL 37 HANDS)
+    // =========================================================================
+    const SUIT_META = {
+      BAM: { label: 'Bam', color: '#15803d', bg: '#f0fdf4' },
+      CRAK: { label: 'Crak', color: '#b91c1c', bg: '#fef2f2' },
+      DOT: { label: 'Dot', color: '#1d4ed8', bg: '#eff6ff' },
+      WIND: { label: 'Wind', color: '#334155', bg: '#f8fafc' },
+      DRAGON: { label: 'Dragon', color: '#6d28d9', bg: '#f5f3ff' },
+      FLOWER: { label: 'Flower', color: '#be185d', bg: '#fdf2f8' },
+      JOKER: { label: 'Joker', color: '#b45309', bg: '#fffbeb' }
+    };
+    const ALL_SUITS = ['BAM', 'CRAK', 'DOT'];
+    const WIND_NAMES = { N: 'North', E: 'East', W: 'West', S: 'South' };
+    const DRAGON_NAMES = { R: 'Red Dragon', G: 'Green Dragon', B: 'Soap (White)' };
+
+    function makeTile(code, idx = 0) {
+      if (code === 'JOKER') return { id: `JOKER_${idx}`, code: 'JOKER', suit: 'JOKER', rank: 0, label: 'Joker', shortTop: '★', shortMid: 'JOKER', isJoker: true };
+      if (code === 'FLOWER') return { id: `FLOWER_${idx}`, code: 'FLOWER', suit: 'FLOWER', rank: 0, label: 'Flower', shortTop: '✿', shortMid: 'FLWR', isJoker: false };
+      if (code.startsWith('WIND_')) { const w = code.split('_')[1]; return { id: `${code}_${idx}`, code, suit: 'WIND', rank: w, label: `${WIND_NAMES[w]} Wind`, shortTop: w, shortMid: 'WIND', isJoker: false }; }
+      if (code.startsWith('DRAGON_')) { const d = code.split('_')[1]; const charMap = { R: '中', G: '發', B: '▯' }; return { id: `${code}_${idx}`, code, suit: 'DRAGON', rank: d, label: DRAGON_NAMES[d], shortTop: charMap[d], shortMid: d === 'B' ? 'SOAP' : (d === 'R' ? 'RED' : 'GRN'), isJoker: false }; }
+      const [numStr, suit] = code.split('_');
+      return { id: `${code}_${idx}`, code, suit, rank: parseInt(numStr, 10), label: `${numStr} ${SUIT_META[suit].label}`, shortTop: numStr, shortMid: suit, isJoker: false };
+    }
+
+    function buildFullDeck() {
+      const deck = []; let uid = 1;
+      for (const suit of ALL_SUITS) for (let n = 1; n <= 9; n++) for (let c = 0; c < 4; c++) deck.push(makeTile(`${n}_${suit}`, uid++));
+      for (const w of ['N', 'E', 'W', 'S']) for (let c = 0; c < 4; c++) deck.push(makeTile(`WIND_${w}`, uid++));
+      for (const d of ['R', 'G', 'B']) for (let c = 0; c < 4; c++) deck.push(makeTile(`DRAGON_${d}`, uid++));
+      for (let c = 0; c < 8; c++) deck.push(makeTile('FLOWER', uid++));
+      for (let c = 0; c < 8; c++) deck.push(makeTile('JOKER', uid++));
+      return deck;
+    }
+
+    function renderDotPipSVG(n) {
+      const layouts = { 1: [[50,50,18,'#b91c1c']], 2: [[50,28,12,'#15803d'],[50,72,12,'#1d4ed8']], 3: [[28,26,10,'#1d4ed8'],[50,50,10,'#b91c1c'],[72,74,10,'#15803d']], 4: [[32,30,10,'#1d4ed8'],[68,30,10,'#15803d'],[32,70,10,'#15803d'],[68,70,10,'#1d4ed8']], 5: [[30,28,9,'#1d4ed8'],[70,28,9,'#15803d'],[50,50,10,'#b91c1c'],[30,72,9,'#15803d'],[70,72,9,'#1d4ed8']], 6: [[33,24,8.5,'#15803d'],[67,24,8.5,'#15803d'],[33,50,8.5,'#b91c1c'],[67,50,8.5,'#b91c1c'],[33,76,8.5,'#b91c1c'],[67,76,8.5,'#b91c1c']], 7: [[28,22,7.5,'#15803d'],[50,27,7.5,'#15803d'],[72,32,7.5,'#15803d'],[34,54,8,'#b91c1c'],[66,54,8,'#b91c1c'],[34,78,8,'#b91c1c'],[66,78,8,'#b91c1c']], 8: [[34,20,7.5,'#1d4ed8'],[66,20,7.5,'#1d4ed8'],[34,40,7.5,'#1d4ed8'],[66,40,7.5,'#1d4ed8'],[34,60,7.5,'#1d4ed8'],[66,60,7.5,'#1d4ed8'],[34,80,7.5,'#1d4ed8'],[66,80,7.5,'#1d4ed8']], 9: [[26,22,7,'#1d4ed8'],[50,22,7,'#1d4ed8'],[74,22,7,'#1d4ed8'],[26,50,7,'#b91c1c'],[50,50,7,'#b91c1c'],[74,50,7,'#b91c1c'],[26,78,7,'#15803d'],[50,78,7,'#15803d'],[74,78,7,'#15803d']] };
+      const pips = layouts[n] || layouts[1];
+      return `<svg viewBox="0 0 100 100" class="w-full h-full">${pips.map(([cx,cy,r,col]) => `<circle cx="${cx}" cy="${cy}" r="${r}" fill="${col}" /><circle cx="${cx}" cy="${cy}" r="${r*0.42}" fill="none" stroke="#ffffff" stroke-width="2" />`).join('')}</svg>`;
+    }
+
+    function renderBamPipSVG(n) {
+      if (n === 1) return `<svg viewBox="0 0 100 100" class="w-full h-full"><circle cx="50" cy="54" r="24" fill="#15803d" opacity="0.16"/><path d="M35 66 C34 48, 46 34, 58 34 C66 34, 70 40, 66 47 C73 49, 75 58, 66 65 C58 72, 42 74, 35 66 Z" fill="#15803d"/><circle cx="57" cy="41" r="2.5" fill="#fff"/><path d="M66 40 L76 42 L66 45 Z" fill="#d97706"/><path d="M38 56 C46 52, 56 54, 62 60" stroke="#b91c1c" stroke-width="4" stroke-linecap="round" fill="none"/></svg>`;
+      const stick = (x, y, h, col) => `<rect x="${x-3.5}" y="${y}" width="7" height="${h}" rx="3.5" fill="${col}"/><line x1="${x-3}" y1="${y+h/2}" x2="${x+3}" y2="${y+h/2}" stroke="#fff" stroke-width="1.5"/>`;
+      const map = { 2: [[50,16,30,'#1d4ed8'],[50,54,30,'#15803d']], 3: [[50,14,28,'#1d4ed8'],[32,54,28,'#15803d'],[68,54,28,'#15803d']], 4: [[32,16,28,'#1d4ed8'],[68,16,28,'#15803d'],[32,54,28,'#15803d'],[68,54,28,'#1d4ed8']], 5: [[28,16,28,'#15803d'],[72,16,28,'#1d4ed8'],[50,36,28,'#b91c1c'],[28,54,28,'#1d4ed8'],[72,54,28,'#15803d']], 6: [[30,16,28,'#15803d'],[50,16,28,'#15803d'],[70,16,28,'#15803d'],[30,54,28,'#1d4ed8'],[50,54,28,'#1d4ed8'],[70,54,28,'#1d4ed8']], 7: [[50,10,22,'#b91c1c'],[30,38,22,'#15803d'],[50,38,22,'#15803d'],[70,38,22,'#15803d'],[30,66,22,'#1d4ed8'],[50,66,22,'#1d4ed8'],[70,66,22,'#1d4ed8']], 8: [[28,14,22,'#15803d'],[50,14,22,'#15803d'],[72,14,22,'#15803d'],[38,39,22,'#b91c1c'],[62,39,22,'#b91c1c'],[28,64,22,'#1d4ed8'],[50,64,22,'#1d4ed8'],[72,64,22,'#1d4ed8']], 9: [[28,12,21,'#b91c1c'],[50,12,21,'#1d4ed8'],[72,12,21,'#15803d'],[28,39,21,'#b91c1c'],[50,39,21,'#1d4ed8'],[72,39,21,'#15803d'],[28,66,21,'#b91c1c'],[50,66,21,'#1d4ed8'],[72,66,21,'#15803d']] };
+      return `<svg viewBox="0 0 100 100" class="w-full h-full">${(map[n]||map[2]).map(([x,y,h,c]) => stick(x,y,h,c)).join('')}</svg>`;
+    }
+
+    function getTileArtworkHTML(tile, isSmall) {
+      if (tile.suit === 'DOT') return `<div class="w-full flex items-center justify-between px-1 pt-0.5 leading-none"><span class="font-mono font-black ${isSmall?'text-[9px]':'text-[11px]'}" style="color:#1d4ed8">${tile.rank}</span><span class="font-bold ${isSmall?'text-[7px]':'text-[8px]'} text-slate-400">DOT</span></div><div class="${isSmall?'w-6 h-6':'w-9 h-9'} my-auto flex items-center justify-center">${renderDotPipSVG(tile.rank)}</div><div class="h-0.5"></div>`;
+      if (tile.suit === 'BAM') return `<div class="w-full flex items-center justify-between px-1 pt-0.5 leading-none"><span class="font-mono font-black ${isSmall?'text-[9px]':'text-[11px]'}" style="color:#15803d">${tile.rank}</span><span class="font-bold ${isSmall?'text-[7px]':'text-[8px]'} text-slate-400">BAM</span></div><div class="${isSmall?'w-6 h-6':'w-9 h-9'} my-auto flex items-center justify-center">${renderBamPipSVG(tile.rank)}</div><div class="h-0.5"></div>`;
+      if (tile.suit === 'CRAK') return `<div class="w-full flex items-center justify-between px-1 pt-0.5 leading-none"><span class="font-mono font-black ${isSmall?'text-[9px]':'text-[11px]'}" style="color:#b91c1c">${tile.rank}</span><span class="font-bold ${isSmall?'text-[7px]':'text-[8px]'} text-slate-400">CRAK</span></div><div class="my-auto flex flex-col items-center leading-none"><span class="font-black ${isSmall?'text-xs':'text-lg'}" style="color:#b91c1c">萬</span></div><div class="pb-0.5 font-extrabold ${isSmall?'text-[6px]':'text-[8px]'} tracking-wider text-red-800">CRAK</div>`;
+      if (tile.suit === 'WIND') return `<div class="w-full flex justify-start px-1 pt-0.5 leading-none"><span class="font-mono font-black ${isSmall?'text-[8px]':'text-[10px]'} text-slate-500">${tile.rank}</span></div><div class="my-auto font-black ${isSmall?'text-base':'text-2xl'} text-slate-800 leading-none">${tile.rank}</div><div class="pb-0.5 font-extrabold ${isSmall?'text-[6px]':'text-[8px]'} tracking-wider text-slate-600">${WIND_NAMES[tile.rank].toUpperCase()}</div>`;
+      if (tile.suit === 'DRAGON') {
+        if (tile.rank === 'B') return `<div class="w-full flex justify-start px-1 pt-0.5 leading-none"><span class="font-mono font-black ${isSmall?'text-[8px]':'text-[10px]'} text-blue-700">0</span></div><div class="my-auto ${isSmall?'w-5 h-6':'w-7 h-9'} border-2 border-blue-700 rounded-xs bg-blue-50/40"></div><div class="pb-0.5 font-extrabold ${isSmall?'text-[6px]':'text-[8px]'} tracking-wider text-blue-800">SOAP</div>`;
+        const col = tile.rank === 'R' ? '#b91c1c' : '#15803d';
+        return `<div class="w-full flex justify-start px-1 pt-0.5 leading-none"><span class="font-mono font-black ${isSmall?'text-[8px]':'text-[10px]'}" style="color:${col}">${tile.rank}</span></div><div class="my-auto font-black ${isSmall?'text-base':'text-2xl'} leading-none" style="color:${col}">${tile.shortTop}</div><div class="pb-0.5 font-extrabold ${isSmall?'text-[6px]':'text-[8px]'} tracking-wider" style="color:${col}">${tile.rank==='R'?'RED':'GREEN'}</div>`;
+      }
+      if (tile.suit === 'FLOWER') return `<div class="w-full flex justify-start px-1 pt-0.5 leading-none"><span class="font-black ${isSmall?'text-[8px]':'text-[10px]'} text-pink-600">✿</span></div><div class="my-auto ${isSmall?'text-base':'text-2xl'} leading-none">🌸</div><div class="pb-0.5 font-extrabold ${isSmall?'text-[6px]':'text-[8px]'} tracking-wider text-pink-700">FLOWER</div>`;
+      return `<div class="w-full flex justify-start px-1 pt-0.5 leading-none"><span class="font-black ${isSmall?'text-[8px]':'text-[10px]'} text-amber-600">★</span></div><div class="my-auto ${isSmall?'text-base':'text-2xl'} leading-none">🃏</div><div class="pb-0.5 font-extrabold ${isSmall?'text-[6px]':'text-[8px]'} tracking-wider text-amber-700">JOKER</div>`;
+    }
+
+    function createTileElement(tile, opts = {}) {
+      const el = document.createElement('div');
+      const isSmall = !!opts.small;
+      el.className = `mj-tile ${isSmall ? 'mj-small' : 'mj-rack'} ${opts.selected ? 'selected' : ''} ${opts.hintClass || ''}`;
+      el.title = tile.label;
+      el.innerHTML = getTileArtworkHTML(tile, isSmall);
+      if (opts.onClick) el.onclick = (e) => { e.stopPropagation(); opts.onClick(tile); };
+      return el;
+    }
+
+    // 2026 NMJL OFFICIAL 37 HANDS
+    function grp(kind, count, suitSlot, rankOrCode, jokerAllowed = true) { return { kind, count, suitSlot, rankOrCode, jokerAllowed }; }
+    const HANDS_2026 = [
+      { id: '2026-1', section: '2026', points: 25, concealed: false, patternText: 'FFFF 2026 222 222', note: 'Any 3 suits (2026 uses Soap for 0)', suitCount: 3, groups: [grp('FLOWER',4,0,'FLOWER',true), grp('SINGLE',1,1,2,false), grp('SINGLE',1,1,'DRAGON_B',false), grp('SINGLE',1,1,2,false), grp('SINGLE',1,1,6,false), grp('PUNG',3,2,2,true), grp('PUNG',3,3,2,true)] },
+      { id: '2026-2', section: '2026', points: 25, concealed: false, patternText: '222 0000 222 6666', note: 'Any 2 suits (0000 = 4 Soaps)', suitCount: 2, groups: [grp('PUNG',3,1,2,true), grp('KONG',4,0,'DRAGON_B',true), grp('PUNG',3,2,2,true), grp('KONG',4,1,6,true)] },
+      { id: '2026-3', section: '2026', points: 25, concealed: false, patternText: 'FF 2026 2026 2026', note: '3 suits (each 2026 in a different suit)', suitCount: 3, groups: [grp('PAIR',2,0,'FLOWER',false), grp('SINGLE',1,1,2,false), grp('SINGLE',1,1,'DRAGON_B',false), grp('SINGLE',1,1,2,false), grp('SINGLE',1,1,6,false), grp('SINGLE',1,2,2,false), grp('SINGLE',1,2,'DRAGON_B',false), grp('SINGLE',1,2,2,false), grp('SINGLE',1,2,6,false), grp('SINGLE',1,3,2,false), grp('SINGLE',1,3,'DRAGON_B',false), grp('SINGLE',1,3,2,false), grp('SINGLE',1,3,6,false)] },
+      { id: '2026-4', section: '2026', points: 30, concealed: true, patternText: 'NN EE WW SS 2026 (C)', note: 'Concealed: Winds + 2026 in 1 suit', suitCount: 1, groups: [grp('PAIR',2,0,'WIND_N',false), grp('PAIR',2,0,'WIND_E',false), grp('PAIR',2,0,'WIND_W',false), grp('PAIR',2,0,'WIND_S',false), grp('SINGLE',1,1,2,false), grp('SINGLE',1,1,'DRAGON_B',false), grp('SINGLE',1,1,2,false), grp('SINGLE',1,1,6,false)] },
+      { id: '2468-1', section: '2468', points: 25, concealed: false, patternText: '222 4444 666 8888', note: '1 suit or 2 suits', suitCount: 2, groups: [grp('PUNG',3,1,2,true), grp('KONG',4,1,4,true), grp('PUNG',3,2,6,true), grp('KONG',4,2,8,true)] },
+      { id: '2468-2', section: '2468', points: 25, concealed: false, patternText: 'FF 2222 4444 6666', note: 'Any 3 suits (or 4/6/8)', suitCount: 3, groups: [grp('PAIR',2,0,'FLOWER',false), grp('KONG',4,1,2,true), grp('KONG',4,2,4,true), grp('KONG',4,3,6,true)] },
+      { id: '2468-3', section: '2468', points: 25, concealed: false, patternText: '22 444 66 888 DDDD', note: '1 suit + matching Dragon', suitCount: 1, matchDragon: 1, groups: [grp('PAIR',2,1,2,false), grp('PUNG',3,1,4,true), grp('PAIR',2,1,6,false), grp('PUNG',3,1,8,true), grp('KONG',4,1,'MATCH_DRAGON',true)] },
+      { id: '2468-4', section: '2468', points: 25, concealed: false, patternText: 'FFFF 2468 222 222', note: '3 suits', suitCount: 3, groups: [grp('FLOWER',4,0,'FLOWER',true), grp('SINGLE',1,1,2,false), grp('SINGLE',1,1,4,false), grp('SINGLE',1,1,6,false), grp('SINGLE',1,1,8,false), grp('PUNG',3,2,2,true), grp('PUNG',3,3,2,true)] },
+      { id: '2468-5', section: '2468', points: 30, concealed: true, patternText: '22 44 66 88 222 222 (C)', note: 'Concealed: 3 suits', suitCount: 3, groups: [grp('PAIR',2,1,2,false), grp('PAIR',2,1,4,false), grp('PAIR',2,1,6,false), grp('PAIR',2,1,8,false), grp('PUNG',3,2,2,true), grp('PUNG',3,3,2,true)] },
+      { id: 'LIKE-1', section: 'Any Like Numbers', points: 25, concealed: false, patternText: 'FF 1111 DDDD 1111', note: 'Any 2 suits + Dragon (shown with 1s)', suitCount: 2, matchDragon: 1, groups: [grp('PAIR',2,0,'FLOWER',false), grp('KONG',4,1,1,true), grp('KONG',4,1,'MATCH_DRAGON',true), grp('KONG',4,2,1,true)] },
+      { id: 'LIKE-2', section: 'Any Like Numbers', points: 25, concealed: false, patternText: 'FFFF 5555 55 5555', note: 'All 3 suits (shown with 5s)', suitCount: 3, groups: [grp('FLOWER',4,0,'FLOWER',true), grp('KONG',4,1,5,true), grp('PAIR',2,2,5,false), grp('KONG',4,3,5,true)] },
+      { id: 'LIKE-3', section: 'Any Like Numbers', points: 30, concealed: true, patternText: '11 111 1111 111 DD (C)', note: 'Concealed: 3 suits + Dragon (shown with 1s)', suitCount: 3, matchDragon: 1, groups: [grp('PAIR',2,1,1,false), grp('PUNG',3,2,1,true), grp('KONG',4,3,1,true), grp('PUNG',3,1,1,true), grp('PAIR',2,1,'MATCH_DRAGON',false)] },
+      { id: 'ADD-1', section: 'Addition Hands', points: 25, concealed: false, patternText: 'FF 1111 + 2222 = 3333', note: '1 suit (1+2=3)', suitCount: 1, groups: [grp('PAIR',2,0,'FLOWER',false), grp('KONG',4,1,1,true), grp('KONG',4,1,2,true), grp('KONG',4,1,3,true)] },
+      { id: 'ADD-2', section: 'Addition Hands', points: 25, concealed: false, patternText: 'FF 2222 + 3333 = 5555', note: '1 suit (2+3=5)', suitCount: 1, groups: [grp('PAIR',2,0,'FLOWER',false), grp('KONG',4,1,2,true), grp('KONG',4,1,3,true), grp('KONG',4,1,5,true)] },
+      { id: 'ADD-3', section: 'Addition Hands', points: 25, concealed: false, patternText: 'FF 3333 + 4444 = 7777', note: '3 suits (3+4=7)', suitCount: 3, groups: [grp('PAIR',2,0,'FLOWER',false), grp('KONG',4,1,3,true), grp('KONG',4,2,4,true), grp('KONG',4,3,7,true)] },
+      { id: 'ADD-4', section: 'Addition Hands', points: 25, concealed: false, patternText: 'FF 4444 + 5555 = 9999', note: '3 suits (4+5=9)', suitCount: 3, groups: [grp('PAIR',2,0,'FLOWER',false), grp('KONG',4,1,4,true), grp('KONG',4,2,5,true), grp('KONG',4,3,9,true)] },
+      { id: 'QUINT-1', section: 'Quints', points: 40, concealed: false, patternText: 'FF 11111 2222 33333', note: '1 suit (needs at least 1 Joker)', suitCount: 1, groups: [grp('PAIR',2,0,'FLOWER',false), grp('QUINT',5,1,1,true), grp('KONG',4,1,2,true), grp('QUINT',5,1,3,true).count ? grp('PUNG',3,1,3,true) : grp('PUNG',3,1,3,true)] },
+      { id: 'QUINT-2', section: 'Quints', points: 40, concealed: false, patternText: '11111 NNNN 22222', note: '2 suits + any Wind', suitCount: 2, groups: [grp('QUINT',5,1,1,true), grp('KONG',4,0,'WIND_N',true), grp('QUINT',5,2,2,true)] },
+      { id: 'QUINT-3', section: 'Quints', points: 45, concealed: false, patternText: 'FFFF 77777 77777', note: '2 suits (shown with 7s)', suitCount: 2, groups: [grp('FLOWER',4,0,'FLOWER',true), grp('QUINT',5,1,7,true), grp('QUINT',5,2,7,true)] },
+      { id: 'RUN-1', section: 'Consecutive Run', points: 25, concealed: false, patternText: '11 222 3333 444 55', note: '1 suit (1-2-3-4-5)', suitCount: 1, groups: [grp('PAIR',2,1,1,false), grp('PUNG',3,1,2,true), grp('KONG',4,1,3,true), grp('PUNG',3,1,4,true), grp('PAIR',2,1,5,false)] },
+      { id: 'RUN-2', section: 'Consecutive Run', points: 25, concealed: false, patternText: '55 666 7777 888 99', note: '1 suit (5-6-7-8-9)', suitCount: 1, groups: [grp('PAIR',2,1,5,false), grp('PUNG',3,1,6,true), grp('KONG',4,1,7,true), grp('PUNG',3,1,8,true), grp('PAIR',2,1,9,false)] },
+      { id: 'RUN-3', section: 'Consecutive Run', points: 25, concealed: false, patternText: 'FFFF 1111 22 3333', note: '1 suit or 3 suits (1-2-3)', suitCount: 3, groups: [grp('FLOWER',4,0,'FLOWER',true), grp('KONG',4,1,1,true), grp('PAIR',2,2,2,false), grp('KONG',4,3,3,true)] },
+      { id: 'RUN-4', section: 'Consecutive Run', points: 25, concealed: false, patternText: 'FF 4444 5555 6666', note: '3 suits (4-5-6)', suitCount: 3, groups: [grp('PAIR',2,0,'FLOWER',false), grp('KONG',4,1,4,true), grp('KONG',4,2,5,true), grp('KONG',4,3,6,true)] },
+      { id: 'RUN-5', section: 'Consecutive Run', points: 25, concealed: false, patternText: '111 222 3333 DDDD', note: '1 suit + matching Dragon', suitCount: 1, matchDragon: 1, groups: [grp('PUNG',3,1,1,true), grp('PUNG',3,1,2,true), grp('KONG',4,1,3,true), grp('KONG',4,1,'MATCH_DRAGON',true)] },
+      { id: 'RUN-6', section: 'Consecutive Run', points: 30, concealed: true, patternText: '11 22 33 44 555 555 (C)', note: 'Concealed: 3 suits', suitCount: 3, groups: [grp('PAIR',2,1,1,false), grp('PAIR',2,1,2,false), grp('PAIR',2,1,3,false), grp('PAIR',2,1,4,false), grp('PUNG',3,2,5,true), grp('PUNG',3,3,5,true)] },
+      { id: '13579-1', section: '13579', points: 25, concealed: false, patternText: '111 3333 555 7777', note: '1 suit or 2 suits', suitCount: 2, groups: [grp('PUNG',3,1,1,true), grp('KONG',4,1,3,true), grp('PUNG',3,2,5,true), grp('KONG',4,2,7,true)] },
+      { id: '13579-2', section: '13579', points: 25, concealed: false, patternText: '333 5555 777 9999', note: '1 suit or 2 suits', suitCount: 2, groups: [grp('PUNG',3,1,3,true), grp('KONG',4,1,5,true), grp('PUNG',3,2,7,true), grp('KONG',4,2,9,true)] },
+      { id: '13579-3', section: '13579', points: 25, concealed: false, patternText: 'FF 1111 3333 5555', note: '3 suits', suitCount: 3, groups: [grp('PAIR',2,0,'FLOWER',false), grp('KONG',4,1,1,true), grp('KONG',4,2,3,true), grp('KONG',4,3,5,true)] },
+      { id: '13579-4', section: '13579', points: 25, concealed: false, patternText: '11 333 55 777 9999', note: '1 suit', suitCount: 1, groups: [grp('PAIR',2,1,1,false), grp('PUNG',3,1,3,true), grp('PAIR',2,1,5,false), grp('PUNG',3,1,7,true), grp('KONG',4,1,9,true)] },
+      { id: '13579-5', section: '13579', points: 30, concealed: true, patternText: '11 33 55 77 999 999 (C)', note: 'Concealed: 3 suits', suitCount: 3, groups: [grp('PAIR',2,1,1,false), grp('PAIR',2,1,3,false), grp('PAIR',2,1,5,false), grp('PAIR',2,1,7,false), grp('PUNG',3,2,9,true), grp('PUNG',3,3,9,true)] },
+      { id: 'WIND-1', section: 'Winds - Dragons', points: 25, concealed: false, patternText: 'NNNN EEE WWW SSSS', note: 'All 4 Winds', suitCount: 0, groups: [grp('KONG',4,0,'WIND_N',true), grp('PUNG',3,0,'WIND_E',true), grp('PUNG',3,0,'WIND_W',true), grp('KONG',4,0,'WIND_S',true)] },
+      { id: 'WIND-2', section: 'Winds - Dragons', points: 25, concealed: false, patternText: 'FF DDDD DDDD DDDD', note: 'Flowers + all 3 Dragons', suitCount: 0, groups: [grp('PAIR',2,0,'FLOWER',false), grp('KONG',4,0,'DRAGON_R',true), grp('KONG',4,0,'DRAGON_G',true), grp('KONG',4,0,'DRAGON_B',true)] },
+      { id: 'WIND-3', section: 'Winds - Dragons', points: 25, concealed: false, patternText: 'NNNN 1111 2222 SS', note: 'N/S Winds + 2 consecutive numbers in 1 suit', suitCount: 1, groups: [grp('KONG',4,0,'WIND_N',true), grp('KONG',4,1,1,true), grp('KONG',4,1,2,true), grp('PAIR',2,0,'WIND_S',false)] },
+      { id: 'WIND-4', section: 'Winds - Dragons', points: 30, concealed: true, patternText: 'NN EE WW SS DDD DDD (C)', note: 'Concealed: Winds + 2 Dragons', suitCount: 0, groups: [grp('PAIR',2,0,'WIND_N',false), grp('PAIR',2,0,'WIND_E',false), grp('PAIR',2,0,'WIND_W',false), grp('PAIR',2,0,'WIND_S',false), grp('PUNG',3,0,'DRAGON_R',true), grp('PUNG',3,0,'DRAGON_G',true)] },
+      { id: '369-1', section: '369', points: 25, concealed: false, patternText: '333 6666 333 6666', note: '2 suits', suitCount: 2, groups: [grp('PUNG',3,1,3,true), grp('KONG',4,1,6,true), grp('PUNG',3,2,3,true), grp('KONG',4,2,6,true)] },
+      { id: '369-2', section: '369', points: 25, concealed: false, patternText: 'FF 3333 6666 9999', note: '1 suit or 3 suits', suitCount: 3, groups: [grp('PAIR',2,0,'FLOWER',false), grp('KONG',4,1,3,true), grp('KONG',4,2,6,true), grp('KONG',4,3,9,true)] },
+      { id: 'SP-1', section: 'Singles and Pairs', points: 50, concealed: true, patternText: 'FF 2026 2026 2026 (C)', note: 'Concealed 50-pt Special (No Jokers!)', suitCount: 3, groups: [grp('PAIR',2,0,'FLOWER',false), grp('SINGLE',1,1,2,false), grp('SINGLE',1,1,'DRAGON_B',false), grp('SINGLE',1,1,2,false), grp('SINGLE',1,1,6,false), grp('SINGLE',1,2,2,false), grp('SINGLE',1,2,'DRAGON_B',false), grp('SINGLE',1,2,2,false), grp('SINGLE',1,2,6,false), grp('SINGLE',1,3,2,false), grp('SINGLE',1,3,'DRAGON_B',false), grp('SINGLE',1,3,2,false), grp('SINGLE',1,3,6,false)] }
+    ];
+
+    function getSuitPermutations(suitCount) {
+      if (suitCount === 0) return [[]];
+      if (suitCount === 1) return [['BAM'], ['CRAK'], ['DOT']];
+      if (suitCount === 2) return [['BAM','CRAK'],['BAM','DOT'],['CRAK','BAM'],['CRAK','DOT'],['DOT','BAM'],['DOT','CRAK']];
+      return [['BAM','CRAK','DOT'],['BAM','DOT','CRAK'],['CRAK','BAM','DOT'],['CRAK','DOT','BAM'],['DOT','BAM','CRAK'],['DOT','CRAK','BAM']];
+    }
+    const SUIT_TO_DRAGON = { CRAK: 'DRAGON_R', BAM: 'DRAGON_G', DOT: 'DRAGON_B' };
+
+    function expandAllConcreteHands() {
+      const concrete = [];
+      for (const h of HANDS_2026) {
+        const perms = getSuitPermutations(h.suitCount);
+        for (const p of perms) {
+          const reqCounts = {}; const groupDefs = [];
+          for (const g of h.groups) {
+            let code = '';
+            if (g.suitSlot === 0) code = g.rankOrCode;
+            else {
+              const s = p[g.suitSlot - 1];
+              code = g.rankOrCode === 'MATCH_DRAGON' ? SUIT_TO_DRAGON[s] : `${g.rankOrCode}_${s}`;
+            }
+            reqCounts[code] = (reqCounts[code] || 0) + g.count;
+            groupDefs.push({ code, count: g.count, jokerAllowed: g.jokerAllowed && g.count >= 3 });
+          }
+          concrete.push({
+            uid: `${h.id}__${p.join('-') || 'NONE'}`,
+            baseId: h.id, section: h.section, points: h.points, concealed: h.concealed,
+            patternText: h.patternText, note: h.note, suitsUsed: p, reqCounts, groupDefs
+          });
+        }
+      }
+      return concrete;
+    }
+    const CONCRETE_HANDS = expandAllConcreteHands();
+
+    function getHandDifficultyTier(hand) {
+      if (hand.section === 'Singles and Pairs' || hand.points >= 50) return 4;
+      if (hand.concealed) return 3;
+      if (hand.section === 'Consecutive Run' || hand.section === 'Quints') return 2;
+      return 1;
+    }
+
+    // =========================================================================
+    // 4. PATTERN EVALUATOR & COACH HEURISTICS
+    // =========================================================================
+    function evaluateTilesAgainstConcreteHand(allTiles, exposures, concreteHand) {
+      if (concreteHand.concealed && exposures.length > 0) return { distance: 99, missingCodes: [], keepCodes: new Set(), dead: true };
+      const counts = {}; let jokers = 0;
+      for (const t of allTiles) { if (t.isJoker) jokers++; else counts[t.code] = (counts[t.code] || 0) + 1; }
+      for (const exp of exposures) {
+        for (const t of exp.tiles) { if (t.isJoker) jokers++; else counts[t.code] = (counts[t.code] || 0) + 1; }
+      }
+      let missing = 0; const missingCodes = []; const keepCodes = new Set();
+      for (const g of concreteHand.groupDefs) {
+        keepCodes.add(g.code);
+        const have = Math.min(counts[g.code] || 0, g.count);
+        counts[g.code] = Math.max(0, (counts[g.code] || 0) - have);
+        let deficit = g.count - have;
+        if (deficit > 0 && g.jokerAllowed && jokers > 0) {
+          const useJ = Math.min(deficit, jokers);
+          jokers -= useJ; deficit -= useJ;
+        }
+        missing += deficit;
+        for (let i = 0; i < deficit; i++) missingCodes.push(g.code);
+      }
+      return { distance: missing, missingCodes, keepCodes, dead: false };
+    }
+
+    function getBestHandsForSeat(seatIdx, topN = 3) {
+      const seat = gameState.seats[seatIdx];
+      const allTiles = seat.hand;
+      const exposures = seat.exposures;
+      const lockedUid = seatIdx === 0 ? gameState.lockedTargetUid : seat.aiTargetUid;
+      const unlockedTier = Math.min(4, Math.max(1, playerStats.round1TierUnlocked || 1));
+
+      const scored = [];
+      for (const ch of CONCRETE_HANDS) {
+        const res = evaluateTilesAgainstConcreteHand(allTiles, exposures, ch);
+        if (res.dead) continue;
+        const tier = getHandDifficultyTier(ch);
+        let rankScore = res.distance * 10 - (ch.points / 25);
+        if (seatIdx === 0 && !lockedUid) {
+          if (tier === unlockedTier) rankScore -= 2.2;
+          else if (tier < unlockedTier) rankScore -= 0.8;
+          else rankScore += 1.6;
+        }
+        scored.push({ concrete: ch, ...res, tier, rankScore });
+      }
+      scored.sort((a, b) => a.rankScore - b.rankScore);
+
+      const picked = []; const seenBase = new Set();
+      if (lockedUid) {
+        const lockedItem = scored.find(s => s.concrete.uid === lockedUid);
+        if (lockedItem) { picked.push(lockedItem); seenBase.add(lockedItem.concrete.baseId); }
+      }
+      for (const s of scored) {
+        if (picked.length >= topN) break;
+        if (seenBase.has(s.concrete.baseId)) continue;
+        picked.push(s); seenBase.add(s.concrete.baseId);
+      }
+      return picked;
+    }
+
+    function computeDiscardRecommendations(seatIdx) {
+      const top3 = getBestHandsForSeat(seatIdx, 3);
+      const hand = gameState.seats[seatIdx].hand;
+      const primary = top3[0];
+      if (!primary) return { bestDrop: hand[0], rankedDrops: [], keepIds: new Set(), dropIds: new Set() };
+
+      const reqNeeded = { ...primary.concrete.reqCounts };
+      const secondaryKeep = new Set();
+      top3.slice(1).forEach(h => h.keepCodes.forEach(c => secondaryKeep.add(c)));
+
+      const scoredTiles = hand.map(t => {
+        if (t.isJoker) return { tile: t, keepScore: 999, reason: 'Joker is wild — always keep!' };
+        const neededInPrimary = reqNeeded[t.code] || 0;
+        if (neededInPrimary > 0) {
+          reqNeeded[t.code]--;
+          return { tile: t, keepScore: 100 + neededInPrimary * 10, reason: `Matches your #1 pattern (${primary.concrete.patternText})` };
+        }
+        if (secondaryKeep.has(t.code)) return { tile: t, keepScore: 45, reason: 'Backup tile for your #2/#3 pattern' };
+        const discardSeen = gameState.discards.filter(d => d.tile.code === t.code).length;
+        return { tile: t, keepScore: 10 - discardSeen * 2, reason: 'Not needed for your top 2026 patterns' };
+      });
+
+      scoredTiles.sort((a, b) => a.keepScore - b.keepScore);
+      const keepIds = new Set(scoredTiles.filter(s => s.keepScore >= 45).map(s => s.tile.id));
+      const dropIds = new Set(scoredTiles.filter(s => s.keepScore < 45).map(s => s.tile.id));
+      return { bestDrop: scoredTiles[0]?.tile || hand[0], rankedDrops: scoredTiles, keepIds, dropIds, top3 };
+    }
+
+    function checkSeatCanDeclareMahjongg(seatIdx) {
+      const seat = gameState.seats[seatIdx];
+      const total = seat.hand.length + seat.exposures.reduce((s, e) => s + e.tiles.length, 0);
+      if (total !== 14) return null;
+      for (const ch of CONCRETE_HANDS) {
+        const res = evaluateTilesAgainstConcreteHand(seat.hand, seat.exposures, ch);
+        if (!res.dead && res.distance === 0) return ch;
+      }
+      return null;
+    }
+
+    function checkSeatCanCallDiscard(seatIdx, tile) {
+      if (tile.isJoker) return [];
+      const seat = gameState.seats[seatIdx];
+      const top3 = getBestHandsForSeat(seatIdx, 3);
+      const calls = [];
+      for (const h of top3) {
+        if (h.concrete.concealed) continue;
+        for (const g of h.concrete.groupDefs) {
+          if (g.code !== tile.code || g.count < 3) continue;
+          const alreadyExposed = seat.exposures.some(e => e.code === tile.code);
+          if (alreadyExposed) continue;
+          const exactMatches = seat.hand.filter(t => t.code === tile.code);
+          const jokers = seat.hand.filter(t => t.isJoker);
+          const needFromHand = g.count - 1;
+          if (exactMatches.length + (g.jokerAllowed ? jokers.length : 0) >= needFromHand) {
+            const label = g.count === 3 ? 'Pung (3)' : (g.count === 4 ? 'Kong (4)' : 'Quint (5)');
+            if (!calls.some(c => c.count === g.count)) {
+              calls.push({ count: g.count, label, targetHand: h.concrete });
+            }
+          }
+        }
+      }
+      return calls;
+    }
+
+    // =========================================================================
+    // 5. GAME STATE & CORE ENGINE
+    // =========================================================================
+    const CHARLESTON_STEPS = [
+      { title: 'Pass 1 of 3 — Pass 3 Tiles RIGHT (to Evelyn)', dir: 1 },
+      { title: 'Pass 2 of 3 — Pass 3 Tiles ACROSS (to Marcus)', dir: 2 },
+      { title: 'Pass 3 of 3 — Pass 3 Tiles LEFT (to Clara)', dir: 3 }
+    ];
+
+    let gameState = {
+      roundNumber: 1,
+      wall: [],
+      discards: [],
+      phase: 'CHARLESTON',
+      charlestonStep: 0,
+      turnSeat: 0,
+      hasDrawnThisTurn: true,
+      selectedTileIds: new Set(),
+      lockedTargetUid: null,
+      practiceHintsOn: true,
+      peekHintsActive: false,
+      lastDiscardInfo: null,
+      pendingCallsForPlayer: [],
+      seats: [
+        { name: 'You (South)', hand: [], exposures: [], aiTargetUid: null },
+        { name: 'Evelyn (East)', hand: [], exposures: [], aiTargetUid: null },
+        { name: 'Marcus (West)', hand: [], exposures: [], aiTargetUid: null },
+        { name: 'Clara (North)', hand: [], exposures: [], aiTargetUid: null }
+      ]
+    };
+
+    function shuffle(arr) {
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      return arr;
+    }
+
+    function initNewGame(incrementRound = false) {
+      if (incrementRound) gameState.roundNumber++;
+      const deck = shuffle(buildFullDeck());
+      gameState.wall = deck;
+      gameState.discards = [];
+      gameState.phase = 'CHARLESTON';
+      gameState.charlestonStep = 0;
+      gameState.turnSeat = 0;
+      gameState.hasDrawnThisTurn = true;
+      gameState.selectedTileIds = new Set();
+      gameState.lockedTargetUid = null;
+      gameState.lastDiscardInfo = null;
+      gameState.pendingCallsForPlayer = [];
+
+      for (let s = 0; s < 4; s++) {
+        const dealCount = s === 0 ? 14 : 13;
+        gameState.seats[s].hand = gameState.wall.splice(0, dealCount);
+        gameState.seats[s].exposures = [];
+        gameState.seats[s].aiTargetUid = null;
+      }
+      sortPlayerHand('suit', true);
+      for (let s = 1; s <= 3; s++) {
+        const best = getBestHandsForSeat(s, 1)[0];
+        if (best) gameState.seats[s].aiTargetUid = best.concrete.uid;
+      }
+
+      document.getElementById('post-move-critique').classList.add('hidden');
+      setCoachSpeech(
+        'Happy',
+        `New hand dealt! Look at the <strong>3 Ways to Win</strong> on the right—pick the greenest pattern, then tap <strong>3 Red-Dashed tiles</strong> to pass right (or click <em>Auto-Swap Best 3</em>).`
+      );
+      window.TelemetryLogger.log({
+        game_id: `round_${gameState.roundNumber}`,
+        turn: 0,
+        seat: 0,
+        persona: 'human_coached',
+        state: { phase: 'CHARLESTON', wallRemaining: gameState.wall.length },
+        action: { type: 'DEAL_HAND' },
+        outcome: { status: 'STARTED' }
+      });
+      renderAll();
+    }
+
+    function sortPlayerHand(mode = 'suit', silent = false) {
+      const suitOrder = { BAM: 1, CRAK: 2, DOT: 3, WIND: 4, DRAGON: 5, FLOWER: 6, JOKER: 7 };
+      gameState.seats[0].hand.sort((a, b) => {
+        if (mode === 'rank') {
+          const ra = typeof a.rank === 'number' ? a.rank : 99;
+          const rb = typeof b.rank === 'number' ? b.rank : 99;
+          return (ra - rb) || (suitOrder[a.suit] - suitOrder[b.suit]);
+        }
+        if (suitOrder[a.suit] !== suitOrder[b.suit]) return suitOrder[a.suit] - suitOrder[b.suit];
+        return String(a.rank).localeCompare(String(b.rank), undefined, { numeric: true });
+      });
+      if (!silent) { SoundFX.click(); renderPlayerRack(); }
+    }
+
+    function setCoachSpeech(mood, htmlMessage) {
+      const tag = document.getElementById('coach-mood-tag');
+      const msg = document.getElementById('coach-message');
+      const face = document.getElementById('coach-emoji-face');
+      const faces = { Happy: '💁🏾‍♀️', Proud: '🤩', Alert: '🧐', Thinking: '🤔', Demo: '🤖' };
+      if (tag) tag.textContent = mood;
+      if (face) face.textContent = faces[mood] || '💁🏾‍♀️';
+      if (msg) msg.innerHTML = htmlMessage;
+    }
+
+    function triggerTableReachAnimation(type) {
+      const el = document.getElementById('reach-hand-overlay');
+      if (!el) return;
+      el.classList.remove('hidden', 'anim-reach-draw', 'anim-reach-discard');
+      void el.offsetWidth;
+      el.classList.add(type === 'draw' ? 'anim-reach-draw' : 'anim-reach-discard');
+      setTimeout(() => el.classList.add('hidden'), 540);
+    }
+
+    function toggleTileSelection(tile) {
+      SoundFX.click();
+      if (gameState.phase === 'CHARLESTON') {
+        if (tile.isJoker) {
+          setCoachSpeech('Alert', 'Hold on! Official NMJL rules say <strong>Jokers can NEVER be passed</strong> during the Charleston. Pick 3 non-Joker tiles.');
+          return;
+        }
+        if (gameState.selectedTileIds.has(tile.id)) gameState.selectedTileIds.delete(tile.id);
+        else if (gameState.selectedTileIds.size < 3) gameState.selectedTileIds.add(tile.id);
+        renderAll();
+        return;
+      }
+      if (gameState.phase === 'PLAY' && gameState.turnSeat === 0 && gameState.hasDrawnThisTurn) {
+        if (gameState.selectedTileIds.has(tile.id)) {
+          discardPlayerTile(tile.id);
+        } else {
+          gameState.selectedTileIds.clear();
+          gameState.selectedTileIds.add(tile.id);
+          renderPlayerRack();
+          renderNextStepBanner();
+        }
+      }
+    }
+
+    function executeCharlestonPass(autoPick = false) {
+      if (gameState.phase !== 'CHARLESTON') return;
+      const rec = computeDiscardRecommendations(0);
+      if (autoPick) {
+        gameState.selectedTileIds.clear();
+        const nonJokers = rec.rankedDrops.filter(r => !r.tile.isJoker).slice(0, 3);
+        nonJokers.forEach(r => gameState.selectedTileIds.add(r.tile.id));
+      }
+      if (gameState.selectedTileIds.size !== 3) return;
+
+      const stepInfo = CHARLESTON_STEPS[gameState.charlestonStep];
+      const passes = [[], [], [], []];
+
+      // Seat 0 chosen 3
+      const pHand = gameState.seats[0].hand;
+      passes[0] = pHand.filter(t => gameState.selectedTileIds.has(t.id));
+      gameState.seats[0].hand = pHand.filter(t => !gameState.selectedTileIds.has(t.id));
+
+      // AI seats choose weakest 3 non-jokers
+      for (let s = 1; s <= 3; s++) {
+        const sRec = computeDiscardRecommendations(s);
+        const drop3 = sRec.rankedDrops.filter(r => !r.tile.isJoker).slice(0, 3).map(r => r.tile);
+        const dropSet = new Set(drop3.map(t => t.id));
+        passes[s] = drop3;
+        gameState.seats[s].hand = gameState.seats[s].hand.filter(t => !dropSet.has(t.id));
+      }
+
+      // Distribute according to direction
+      for (let s = 0; s < 4; s++) {
+        const receiver = (s + stepInfo.dir) % 4;
+        gameState.seats[receiver].hand.push(...passes[s]);
+      }
+
+      SoundFX.clack();
+      gameState.selectedTileIds.clear();
+      gameState.charlestonStep++;
+
+      if (gameState.charlestonStep >= CHARLESTON_STEPS.length) {
+        gameState.phase = 'PLAY';
+        gameState.turnSeat = 0;
+        gameState.hasDrawnThisTurn = true;
+        sortPlayerHand('suit', true);
+        const nextRec = computeDiscardRecommendations(0);
+        setCoachSpeech(
+          'Happy',
+          `Charleston complete! You have 14 tiles—tap <strong>${nextRec.bestDrop.label}</strong> (or click <em>Do Best Move For Me</em>) to make the first discard.`
+        );
+      } else {
+        sortPlayerHand('suit', true);
+        setCoachSpeech(
+          'Thinking',
+          `Nice swap! Now for <strong>${CHARLESTON_STEPS[gameState.charlestonStep].title}</strong>—pick 3 more tiles you don't need.`
+        );
+      }
+      renderAll();
+    }
+
+    function showMoveCritique(tile, bestDrop, topPatternText) {
+      const box = document.getElementById('post-move-critique');
+      const badge = document.getElementById('critique-grade-badge');
+      const label = document.getElementById('critique-move-label');
+      const exp = document.getElementById('critique-explanation');
+      const isOptimal = !tile.isJoker && (tile.code === bestDrop.code || !computeDiscardRecommendations(0).keepIds.has(tile.id));
+
+      playerStats.totalDecisions++;
+      if (isOptimal) playerStats.optimalDecisions++;
+      persistPlayerStats(playerStats);
+
+      box.classList.remove('hidden', 'bg-emerald-50', 'border-emerald-400', 'bg-amber-50', 'border-amber-400');
+      if (isOptimal) {
+        box.classList.add('bg-emerald-50', 'border-emerald-400');
+        badge.className = 'font-bold text-[11px] px-2 py-0.5 rounded uppercase bg-emerald-200 text-emerald-950';
+        badge.textContent = '✨ OPTIMAL DISCARD';
+        exp.innerHTML = `Throwing <strong>${tile.label}</strong> kept every core tile for <strong>${topPatternText}</strong> intact.`;
+      } else {
+        box.classList.add('bg-amber-50', 'border-amber-400');
+        badge.className = 'font-bold text-[11px] px-2 py-0.5 rounded uppercase bg-amber-200 text-amber-950';
+        badge.textContent = '💡 COACH TIP';
+        exp.innerHTML = `You threw <strong>${tile.label}</strong>, which matched your top pattern. <strong>${bestDrop.label}</strong> was safer to let go.`;
+      }
+      label.textContent = `Turn ${gameState.discards.length + 1}`;
+      return isOptimal ? 'OPTIMAL' : 'SUBOPTIMAL';
+    }
+
+    function discardPlayerTile(tileId) {
+      if (gameState.phase !== 'PLAY' || gameState.turnSeat !== 0 || !gameState.hasDrawnThisTurn) return;
+      const hand = gameState.seats[0].hand;
+      const idx = hand.findIndex(t => t.id === tileId);
+      if (idx === -1) return;
+
+      const recBefore = computeDiscardRecommendations(0);
+      const [thrown] = hand.splice(idx, 1);
+      gameState.selectedTileIds.clear();
+      gameState.peekHintsActive = false;
+
+      const alignment = showMoveCritique(thrown, recBefore.bestDrop, recBefore.top3[0]?.concrete.patternText || '2026 Hand');
+      SoundFX.clack();
+      triggerTableReachAnimation('discard');
+
+      gameState.discards.push({ seat: 0, tile: thrown });
+      gameState.lastDiscardInfo = { seat: 0, tile: thrown };
+      gameState.hasDrawnThisTurn = false;
+
+      window.TelemetryLogger.log({
+        game_id: `round_${gameState.roundNumber}`,
+        turn: gameState.discards.length,
+        seat: 0,
+        persona: 'human_coached',
+        state: {
+          turn: gameState.discards.length,
+          exposedCount: gameState.seats[0].exposures.length,
+          minPatternDistance: recBefore.top3[0]?.distance ?? 14,
+          jokerCount: hand.filter(t => t.isJoker).length
+        },
+        action: { type: 'DISCARD', tile: thrown.code, coach_alignment: alignment },
+        outcome: { won_hand: 0, dealt_in: 0 }
+      });
+
+      renderAll();
+      resolveDiscardAndAdvance(0, thrown);
+    }
+
+    function resolveDiscardAndAdvance(discarderSeat, tile) {
+      // Check if an AI wants to call for Mahjongg or Exposure
+      for (let offset = 1; offset <= 3; offset++) {
+        const seatIdx = (discarderSeat + offset) % 4;
+        if (seatIdx === 0) continue;
+        // Check AI win on discard
+        gameState.seats[seatIdx].hand.push(tile);
+        const winHand = checkSeatCanDeclareMahjongg(seatIdx);
+        gameState.seats[seatIdx].hand.pop();
+        if (winHand) {
+          gameState.seats[seatIdx].hand.push(tile);
+          finishRoundWithWinner(seatIdx, winHand, true);
+          return;
+        }
+        // Check AI Pung/Kong call (Marcus calls aggressively, others selectively)
+        const calls = checkSeatCanCallDiscard(seatIdx, tile);
+        const callProb = seatIdx === 2 ? 0.72 : (seatIdx === 1 ? 0.45 : 0.15);
+        if (calls.length > 0 && Math.random() < callProb) {
+          executeSeatCall(seatIdx, tile, calls[0]);
+          return;
+        }
+      }
+
+      // Check if Human (Seat 0) can call this discard
+      if (discarderSeat !== 0) {
+        gameState.seats[0].hand.push(tile);
+        const playerWin = checkSeatCanDeclareMahjongg(0);
+        gameState.seats[0].hand.pop();
+        const playerCalls = checkSeatCanCallDiscard(0, tile);
+
+        if (playerWin || playerCalls.length > 0) {
+          gameState.phase = 'CLAIM_WINDOW';
+          gameState.pendingCallsForPlayer = playerCalls;
+          gameState.pendingWinForPlayer = playerWin;
+          SoundFX.call();
+          setCoachSpeech(
+            'Alert',
+            playerWin
+              ? `🎉 <strong>MAHJONGG ALERT!</strong> ${gameState.seats[discarderSeat].name} just threw <strong>${tile.label}</strong>—click <strong>CALL MAHJONGG!</strong> to win!`
+              : `⚡ <strong>CALL OPPORTUNITY!</strong> ${gameState.seats[discarderSeat].name} discarded <strong>${tile.label}</strong>—you can claim it for a <strong>${playerCalls[0].label}</strong> or pass to draw.`
+          );
+          renderAll();
+          return;
+        }
+      }
+
+      advanceToNextSeatDraw((discarderSeat + 1) % 4);
+    }
+
+    function passPlayerClaim() {
+      if (gameState.phase !== 'CLAIM_WINDOW') return;
+      const lastSeat = gameState.lastDiscardInfo ? gameState.lastDiscardInfo.seat : 3;
+      gameState.phase = 'PLAY';
+      gameState.pendingCallsForPlayer = [];
+      gameState.pendingWinForPlayer = null;
+      SoundFX.click();
+      advanceToNextSeatDraw((lastSeat + 1) % 4);
+    }
+
+    function executeSeatCall(seatIdx, discardedTile, callObj) {
+      gameState.discards.pop();
+      const seat = gameState.seats[seatIdx];
+      const needFromHand = callObj.count - 1;
+      const taken = [];
+      for (let i = seat.hand.length - 1; i >= 0 && taken.length < needFromHand; i--) {
+        if (seat.hand[i].code === discardedTile.code) taken.push(seat.hand.splice(i, 1)[0]);
+      }
+      for (let i = seat.hand.length - 1; i >= 0 && taken.length < needFromHand; i--) {
+        if (seat.hand[i].isJoker) taken.push(seat.hand.splice(i, 1)[0]);
+      }
+      seat.exposures.push({ code: discardedTile.code, label: callObj.label, tiles: [discardedTile, ...taken] });
+      gameState.phase = 'PLAY';
+      gameState.turnSeat = seatIdx;
+      gameState.hasDrawnThisTurn = true;
+      gameState.pendingCallsForPlayer = [];
+      gameState.lastDiscardInfo = null;
+      SoundFX.call();
+
+      if (seatIdx === 0) {
+        sortPlayerHand('suit', true);
+        const rec = computeDiscardRecommendations(0);
+        setCoachSpeech('Proud', `Awesome call! Your <strong>${callObj.label} of ${discardedTile.label}</strong> is exposed on your rack. Now discard <strong>${rec.bestDrop.label}</strong>.`);
+        renderAll();
+      } else {
+        setCoachSpeech('Alert', `<strong>${seat.name}</strong> called <strong>${callObj.label}</strong> on ${discardedTile.label}!`);
+        renderAll();
+        setTimeout(() => runAiTurnDiscard(seatIdx), 550);
+      }
+    }
+
+    function advanceToNextSeatDraw(nextSeat) {
+      if (gameState.wall.length === 0) {
+        finishRoundWallGame();
+        return;
+      }
+      gameState.phase = 'PLAY';
+      gameState.turnSeat = nextSeat;
+      const drawn = gameState.wall.shift();
+      gameState.seats[nextSeat].hand.push(drawn);
+      gameState.hasDrawnThisTurn = true;
+
+      if (nextSeat === 0) {
+        SoundFX.draw();
+        triggerTableReachAnimation('draw');
+        sortPlayerHand('suit', true);
+        const winHand = checkSeatCanDeclareMahjongg(0);
+        const rec = computeDiscardRecommendations(0);
+        if (winHand) {
+          setCoachSpeech('Proud', `🎉 YOU DREW <strong>${drawn.label}</strong> FOR MAHJONGG! Click the golden <strong>DECLARE MAHJONGG!</strong> button right now!`);
+        } else {
+          setCoachSpeech('Happy', `You drew <strong>${drawn.label}</strong> (${rec.top3[0]?.distance ?? '?'} away from <strong>${rec.top3[0]?.concrete.patternText}</strong>). Throw <strong>${rec.bestDrop.label}</strong>.`);
+        }
+        renderAll();
+      } else {
+        renderAll();
+        setTimeout(() => runAiTurnDiscard(nextSeat), simulatedDemoActive ? 380 : 520);
+      }
+    }
+
+    function runAiTurnDiscard(seatIdx) {
+      if (gameState.phase !== 'PLAY' || gameState.turnSeat !== seatIdx) return;
+      const winHand = checkSeatCanDeclareMahjongg(seatIdx);
+      if (winHand) {
+        finishRoundWithWinner(seatIdx, winHand, false);
+        return;
+      }
+      const rec = computeDiscardRecommendations(seatIdx);
+      const drop = rec.bestDrop || gameState.seats[seatIdx].hand[0];
+      const idx = gameState.seats[seatIdx].hand.findIndex(t => t.id === drop.id);
+      if (idx !== -1) gameState.seats[seatIdx].hand.splice(idx, 1);
+
+      SoundFX.clack();
+      gameState.discards.push({ seat: seatIdx, tile: drop });
+      gameState.lastDiscardInfo = { seat: seatIdx, tile: drop };
+      gameState.hasDrawnThisTurn = false;
+
+      window.TelemetryLogger.log({
+        game_id: `round_${gameState.roundNumber}`,
+        turn: gameState.discards.length,
+        seat: seatIdx,
+        persona: seatIdx === 1 ? 'defensive_reader' : (seatIdx === 2 ? 'fast_caller' : 'concealed_specialist'),
+        state: { turn: gameState.discards.length, exposedCount: gameState.seats[seatIdx].exposures.length, minPatternDistance: rec.top3[0]?.distance ?? 14 },
+        action: { type: 'DISCARD', tile: drop.code },
+        outcome: { won_hand: 0, dealt_in: 0 }
+      });
+
+      renderAll();
+      resolveDiscardAndAdvance(seatIdx, drop);
+    }
+
+    function performRecommendedAction() {
+      if (gameState.phase === 'CHARLESTON') {
+        executeCharlestonPass(true);
+        return;
+      }
+      if (gameState.phase === 'CLAIM_WINDOW') {
+        if (gameState.pendingWinForPlayer) {
+          gameState.seats[0].hand.push(gameState.lastDiscardInfo.tile);
+          finishRoundWithWinner(0, gameState.pendingWinForPlayer, true);
+        } else if (gameState.pendingCallsForPlayer.length > 0) {
+          executeSeatCall(0, gameState.lastDiscardInfo.tile, gameState.pendingCallsForPlayer[0]);
+        } else {
+          passPlayerClaim();
+        }
+        return;
+      }
+      if (gameState.phase === 'PLAY' && gameState.turnSeat === 0 && gameState.hasDrawnThisTurn) {
+        const winHand = checkSeatCanDeclareMahjongg(0);
+        if (winHand) {
+          finishRoundWithWinner(0, winHand, false);
+          return;
+        }
+        const rec = computeDiscardRecommendations(0);
+        if (rec.bestDrop) discardPlayerTile(rec.bestDrop.id);
+      }
+    }
+
+    // =========================================================================
+    // 6. SIMULATED AI + COACH DEMO MODE
+    // =========================================================================
+    let simulatedDemoActive = false;
+    let simulatedDemoTimer = null;
+
+    function toggleSimulatedCoachDemo() {
+      simulatedDemoActive = !simulatedDemoActive;
+      const btn = document.getElementById('ai-demo-toggle-btn');
+      if (simulatedDemoActive) {
+        btn.textContent = '⏹ Stop AI Demo';
+        btn.classList.add('ring-2', 'ring-amber-300');
+        document.getElementById('welcome-modal').classList.add('hidden');
+        document.getElementById('welcome-modal').classList.remove('flex');
+        setCoachSpeech('Demo', '🤖 <strong>AI + Coach Auto-Play Active!</strong> Watch how Coach Tsege evaluates your rack and streams live <code>(State → Action → Outcome)</code> JSONL trajectories.');
+        simulatedDemoTimer = setInterval(() => {
+          if (!simulatedDemoActive) return;
+          if (gameState.phase === 'ROUND_OVER') {
+            startNextRound();
+            return;
+          }
+          if (gameState.phase === 'CHARLESTON' || gameState.phase === 'CLAIM_WINDOW' || (gameState.phase === 'PLAY' && gameState.turnSeat === 0 && gameState.hasDrawnThisTurn)) {
+            performRecommendedAction();
+          }
+        }, 900);
+      } else {
+        btn.textContent = '🤖 AI + Coach Demo';
+        btn.classList.remove('ring-2', 'ring-amber-300');
+        clearInterval(simulatedDemoTimer);
+        setCoachSpeech('Happy', 'AI Demo paused—your rack is back under your manual control!');
+      }
+    }
+
+    // =========================================================================
+    // 7. ROUND COMPLETION & SCORING
+    // =========================================================================
+    function finishRoundWithWinner(seatIdx, concreteHand, fromDiscard) {
+      gameState.phase = 'ROUND_OVER';
+      SoundFX.mahjongg();
+      const seat = gameState.seats[seatIdx];
+      const earnedPts = concreteHand.points * (fromDiscard ? 1 : 2);
+
+      playerStats.handsPlayed++;
+      if (seatIdx === 0) {
+        playerStats.wins++;
+        playerStats.totalPoints += earnedPts;
+        const tier = getHandDifficultyTier(concreteHand);
+        if (tier >= (playerStats.round1TierUnlocked || 1) && playerStats.round1TierUnlocked < 4) {
+          playerStats.round1TierUnlocked++;
+        }
+      }
+      persistPlayerStats(playerStats);
+
+      window.TelemetryLogger.log({
+        game_id: `round_${gameState.roundNumber}`,
+        turn: gameState.discards.length,
+        seat: seatIdx,
+        persona: seatIdx === 0 ? 'human_coached' : 'ai_bot',
+        state: { finalWall: gameState.wall.length },
+        action: { type: 'DECLARE_MAHJONGG', pattern: concreteHand.patternText },
+        outcome: { won_hand: seatIdx === 0 ? 1 : 0, points: earnedPts }
+      });
+
+      document.getElementById('round-modal-icon').textContent = seatIdx === 0 ? '🏆' : '🀄';
+      document.getElementById('round-modal-title').textContent = seatIdx === 0 ? `YOU WON MAHJONGG! (+${earnedPts} pts)` : `${seat.name} Declared Mahjongg!`;
+      document.getElementById('round-modal-subtitle').innerHTML = `Winning 2026 Pattern: <strong>${concreteHand.patternText}</strong> (${concreteHand.section} • ${concreteHand.points} pts${fromDiscard ? '' : ' • Self-Pick 2x Bonus!'})`;
+
+      const tilesBox = document.getElementById('round-modal-tiles');
+      tilesBox.innerHTML = '';
+      const allWinningTiles = [...seat.hand, ...seat.exposures.flatMap(e => e.tiles)];
+      allWinningTiles.forEach(t => tilesBox.appendChild(createTileElement(t, { small: true })));
+
+      const modal = document.getElementById('round-modal');
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+      renderAll();
+    }
+
+    function finishRoundWallGame() {
+      gameState.phase = 'ROUND_OVER';
+      playerStats.handsPlayed++;
+      persistPlayerStats(playerStats);
+      document.getElementById('round-modal-icon').textContent = '🧱';
+      document.getElementById('round-modal-title').textContent = 'Wall Game (Draw)';
+      document.getElementById('round-modal-subtitle').textContent = 'All tiles from the wall were drawn before anyone completed a 2026 pattern. Ready for a fresh deal?';
+      document.getElementById('round-modal-tiles').innerHTML = '';
+      const modal = document.getElementById('round-modal');
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+
+    function startNextRound() {
+      const modal = document.getElementById('round-modal');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+      initNewGame(true);
+    }
+
+    function confirmNewGame() {
+      SoundFX.click();
+      initNewGame(false);
+    }
+
+    // =========================================================================
+    // 8. UI RENDERING
+    // =========================================================================
+    function renderWalls() {
+      const rem = gameState.wall.length;
+      document.getElementById('wall-count').textContent = rem;
+      const topCount = Math.min(18, Math.ceil(rem / 5));
+      const sideCount = Math.min(10, Math.floor(rem / 10));
+      document.getElementById('table-wall-top').innerHTML = Array(topCount).fill('<div class="wall-brick"></div>').join('');
+      document.getElementById('table-wall-bottom').innerHTML = Array(topCount).fill('<div class="wall-brick"></div>').join('');
+      document.getElementById('table-wall-left').innerHTML = Array(sideCount).fill('<div class="wall-brick-side"></div>').join('');
+      document.getElementById('table-wall-right').innerHTML = Array(sideCount).fill('<div class="wall-brick-side"></div>').join('');
+    }
+
+    function renderAiSeats() {
+      for (let s = 1; s <= 3; s++) {
+        const seat = gameState.seats[s];
+        const handEl = document.getElementById(`seat-${s}-hand`);
+        const expEl = document.getElementById(`seat-${s}-exposures`);
+        const boxEl = document.getElementById(`seat-${s}-box`);
+        if (boxEl) {
+          boxEl.classList.toggle('ring-2', gameState.turnSeat === s && gameState.phase === 'PLAY');
+          boxEl.classList.toggle('ring-amber-400', gameState.turnSeat === s && gameState.phase === 'PLAY');
+        }
+        handEl.innerHTML = Array(seat.hand.length).fill('<div class="mj-tile-back w-4 h-6"></div>').join('');
+        expEl.innerHTML = '';
+        seat.exposures.forEach(exp => {
+          const grpDiv = document.createElement('div');
+          grpDiv.className = 'flex items-center gap-0.5 bg-black/30 p-0.5 rounded';
+          exp.tiles.forEach(t => grpDiv.appendChild(createTileElement(t, { small: true })));
+          expEl.appendChild(grpDiv);
+        });
+      }
+    }
+
+    function renderCenterTable() {
+      document.getElementById('discard-count').textContent = gameState.discards.length;
+      const turnBadge = document.getElementById('turn-indicator');
+      if (gameState.phase === 'CHARLESTON') turnBadge.textContent = `Tile Swap (${gameState.charlestonStep + 1}/3)`;
+      else if (gameState.phase === 'CLAIM_WINDOW') turnBadge.textContent = '⚡ Call Window!';
+      else if (gameState.turnSeat === 0) turnBadge.textContent = 'Your Turn (South)';
+      else turnBadge.textContent = `${gameState.seats[gameState.turnSeat].name}'s Turn`;
+
+      const latestArea = document.getElementById('latest-discard-area');
+      const claimActions = document.getElementById('claim-actions');
+      if (gameState.lastDiscardInfo) {
+        const { seat, tile } = gameState.lastDiscardInfo;
+        latestArea.classList.remove('hidden');
+        const tileWrap = document.getElementById('latest-discard-tile');
+        tileWrap.innerHTML = '';
+        tileWrap.appendChild(createTileElement(tile, { small: true }));
+        document.getElementById('latest-discard-label').textContent = tile.label;
+        document.getElementById('latest-discard-by').textContent = `Thrown by ${gameState.seats[seat].name}`;
+
+        claimActions.innerHTML = '';
+        if (gameState.phase === 'CLAIM_WINDOW') {
+          if (gameState.pendingWinForPlayer) {
+            const winBtn = document.createElement('button');
+            winBtn.className = 'bg-amber-400 hover:bg-amber-300 text-slate-950 font-black px-3 py-1.5 rounded-lg text-xs shadow pulse-alert';
+            winBtn.textContent = '🎉 CALL MAHJONGG!';
+            winBtn.onclick = () => {
+              gameState.seats[0].hand.push(tile);
+              finishRoundWithWinner(0, gameState.pendingWinForPlayer, true);
+            };
+            claimActions.appendChild(winBtn);
+          }
+          gameState.pendingCallsForPlayer.forEach(c => {
+            const btn = document.createElement('button');
+            btn.className = 'bg-emerald-700 hover:bg-emerald-600 text-white font-extrabold px-3 py-1.5 rounded-lg text-xs shadow';
+            btn.textContent = `Call ${c.label}`;
+            btn.onclick = () => executeSeatCall(0, tile, c);
+            claimActions.appendChild(btn);
+          });
+          const passBtn = document.createElement('button');
+          passBtn.className = 'bg-stone-200 hover:bg-stone-300 text-slate-800 font-bold px-3 py-1.5 rounded-lg text-xs';
+          passBtn.textContent = 'Pass (Draw)';
+          passBtn.onclick = passPlayerClaim;
+          claimActions.appendChild(passBtn);
+        }
+      } else {
+        latestArea.classList.add('hidden');
+      }
+
+      const river = document.getElementById('discard-river');
+      if (gameState.discards.length === 0) {
+        river.innerHTML = '<div class="text-xs text-emerald-100/80 italic py-6">Discarded tiles land here in the center of the felt table.</div>';
+      } else {
+        river.innerHTML = '';
+        gameState.discards.forEach(d => river.appendChild(createTileElement(d.tile, { small: true })));
+        river.scrollTop = river.scrollHeight;
+      }
+    }
+
+    function renderPlayerRack() {
+      const rack = document.getElementById('player-rack');
+      const seat0 = gameState.seats[0];
+      document.getElementById('player-tile-count').textContent = `${seat0.hand.length} tiles in rack`;
+
+      const expContainer = document.getElementById('seat-0-exposures');
+      expContainer.innerHTML = '';
+      seat0.exposures.forEach(exp => {
+        const grpDiv = document.createElement('div');
+        grpDiv.className = 'flex items-center gap-0.5 bg-amber-950/60 border border-amber-400/40 px-1.5 py-0.5 rounded-lg';
+        exp.tiles.forEach(t => grpDiv.appendChild(createTileElement(t, { small: true })));
+        expContainer.appendChild(grpDiv);
+      });
+
+      const showHints = gameState.practiceHintsOn || gameState.peekHintsActive;
+      const rec = computeDiscardRecommendations(0);
+
+      rack.innerHTML = '';
+      seat0.hand.forEach(tile => {
+        let hintClass = '';
+        if (showHints) {
+          if (rec.keepIds.has(tile.id)) hintClass = 'hint-keep';
+          else if (rec.dropIds.has(tile.id)) hintClass = 'hint-drop';
+        }
+        rack.appendChild(createTileElement(tile, {
+          selected: gameState.selectedTileIds.has(tile.id),
+          hintClass,
+          onClick: toggleTileSelection
+        }));
+      });
+
+      const legend = document.getElementById('rack-legend-area');
+      legend.innerHTML = showHints
+        ? `<span class="flex items-center gap-1"><span class="w-3 h-1 bg-emerald-400 inline-block rounded"></span> Green Top = Keeper</span>
+           <span class="flex items-center gap-1"><span class="w-3 h-3 border border-dashed border-rose-400 inline-block rounded-xs"></span> Red Dashed = Safe to Pass/Discard</span>`
+        : `<span>Hints hidden — click "Ask Tsege" if you want a peek</span>`;
+
+      const actionsEl = document.getElementById('player-actions');
+      actionsEl.innerHTML = '';
+      const canWin = checkSeatCanDeclareMahjongg(0);
+      if (canWin && gameState.phase === 'PLAY' && gameState.turnSeat === 0) {
+        const mahjBtn = document.createElement('button');
+        mahjBtn.className = 'bg-amber-400 hover:bg-amber-300 text-slate-950 font-black px-3.5 py-1.5 rounded-xl text-xs shadow-lg pulse-alert';
+        mahjBtn.textContent = '🎉 DECLARE MAHJONGG!';
+        mahjBtn.onclick = () => finishRoundWithWinner(0, canWin, false);
+        actionsEl.appendChild(mahjBtn);
+      } else if (gameState.phase === 'PLAY' && gameState.turnSeat === 0 && gameState.selectedTileIds.size === 1) {
+        const selId = [...gameState.selectedTileIds][0];
+        const selTile = seat0.hand.find(t => t.id === selId);
+        if (selTile) {
+          const throwBtn = document.createElement('button');
+          throwBtn.className = 'bg-rose-600 hover:bg-rose-500 text-white font-extrabold px-3 py-1 rounded-lg text-xs shadow';
+          throwBtn.textContent = `Discard ${selTile.label}`;
+          throwBtn.onclick = () => discardPlayerTile(selId);
+          actionsEl.appendChild(throwBtn);
+        }
+      }
+
+      // Charleston bar
+      const charBar = document.getElementById('charleston-bar');
+      if (gameState.phase === 'CHARLESTON') {
+        charBar.classList.remove('hidden');
+        document.getElementById('charleston-step-title').textContent = CHARLESTON_STEPS[gameState.charlestonStep].title;
+        const btns = document.getElementById('charleston-buttons');
+        btns.innerHTML = '';
+        const passBtn = document.createElement('button');
+        const ready = gameState.selectedTileIds.size === 3;
+        passBtn.className = ready
+          ? 'bg-[#245244] hover:bg-[#1a3e33] text-white font-extrabold px-3 py-1.5 rounded-lg text-xs shadow'
+          : 'bg-stone-200 text-stone-500 font-bold px-3 py-1.5 rounded-lg text-xs cursor-not-allowed';
+        passBtn.textContent = `Pass Selected (${gameState.selectedTileIds.size}/3)`;
+        passBtn.disabled = !ready;
+        passBtn.onclick = () => executeCharlestonPass(false);
+        btns.appendChild(passBtn);
+
+        const autoBtn = document.createElement('button');
+        autoBtn.className = 'bg-amber-400 hover:bg-amber-300 text-slate-950 font-extrabold px-3 py-1.5 rounded-lg text-xs shadow';
+        autoBtn.textContent = '✨ Auto-Swap Best 3';
+        autoBtn.onclick = () => executeCharlestonPass(true);
+        btns.appendChild(autoBtn);
+      } else {
+        charBar.classList.add('hidden');
+      }
+
+      renderNextStepBanner();
+    }
+
+    function renderNextStepBanner() {
+      const banner = document.getElementById('next-step-banner');
+      const txt = document.getElementById('next-step-text');
+      const rec = computeDiscardRecommendations(0);
+      if (gameState.phase === 'CHARLESTON') {
+        banner.classList.remove('hidden');
+        txt.textContent = `👉 STEP ${gameState.charlestonStep + 1}/3: Pick 3 tiles to pass, or let Coach Tsege auto-swap`;
+      } else if (gameState.phase === 'CLAIM_WINDOW') {
+        banner.classList.remove('hidden');
+        txt.textContent = `⚡ CALL WINDOW: Claim ${gameState.lastDiscardInfo?.tile.label} or Pass to draw`;
+      } else if (gameState.phase === 'PLAY' && gameState.turnSeat === 0) {
+        banner.classList.remove('hidden');
+        txt.textContent = `👉 YOUR TURN: Tap ${rec.bestDrop?.label || 'a tile'} twice to discard`;
+      } else {
+        banner.classList.add('hidden');
+      }
+    }
+
+    function renderTopHandsSidebar() {
+      const list = document.getElementById('top-hands-list');
+      const top3 = getBestHandsForSeat(0, 3);
+      const unlockBtn = document.getElementById('unlock-hand-btn');
+      unlockBtn.classList.toggle('hidden', !gameState.lockedTargetUid);
+
+      list.innerHTML = '';
+      top3.forEach((item, idx) => {
+        const isLocked = gameState.lockedTargetUid === item.concrete.uid;
+        const pct = Math.max(8, Math.round(((14 - item.distance) / 14) * 100));
+        const card = document.createElement('div');
+        card.className = `p-3 rounded-xl border-2 cursor-pointer transition ${isLocked ? 'bg-amber-50 border-amber-500 shadow-sm' : 'bg-white border-stone-200 hover:border-emerald-500'}`;
+        card.onclick = () => {
+          SoundFX.click();
+          gameState.lockedTargetUid = isLocked ? null : item.concrete.uid;
+          renderAll();
+        };
+        card.innerHTML = `
+          <div class="flex items-center justify-between gap-1 mb-1">
+            <span class="text-[10px] font-black uppercase px-2 py-0.5 rounded ${idx === 0 ? 'bg-emerald-100 text-emerald-900' : 'bg-stone-100 text-slate-700'}">
+              ${isLocked ? '🔒 Locked Target' : `#${idx + 1} Closest`} • ${item.concrete.section}
+            </span>
+            <span class="font-mono font-extrabold text-xs text-slate-800">${item.distance} away • ${item.concrete.points}p</span>
+          </div>
+          <div class="font-mono font-extrabold text-xs sm:text-sm text-slate-900 tracking-tight">${item.concrete.patternText}</div>
+          <div class="text-[11px] text-slate-600 mt-0.5">${item.concrete.note} ${item.concrete.suitsUsed.length ? `• Suits: <strong>${item.concrete.suitsUsed.join(' + ')}</strong>` : ''}</div>
+          <div class="w-full h-1.5 bg-stone-200 rounded-full overflow-hidden mt-2">
+            <div class="h-full bg-[#245244]" style="width:${pct}%"></div>
+          </div>
+        `;
+        list.appendChild(card);
+      });
+    }
+
+    function unlockTargetHand() {
+      SoundFX.click();
+      gameState.lockedTargetUid = null;
+      renderAll();
+    }
+
+    function togglePracticeMode() {
+      SoundFX.click();
+      gameState.practiceHintsOn = !gameState.practiceHintsOn;
+      const btn = document.getElementById('practice-mode-btn');
+      const peek = document.getElementById('peek-hint-btn');
+      btn.textContent = gameState.practiceHintsOn ? '💡 Hints Shown' : '🙈 Hints Hidden';
+      peek.classList.toggle('hidden', gameState.practiceHintsOn);
+      renderPlayerRack();
+    }
+
+    function revealHintsForOneTurn() {
+      SoundFX.click();
+      gameState.peekHintsActive = true;
+      renderPlayerRack();
+    }
+
+    function renderAll() {
+      document.getElementById('wind-round-badge').textContent = `EAST • HAND ${gameState.roundNumber}`;
+      renderWalls();
+      renderAiSeats();
+      renderCenterTable();
+      renderPlayerRack();
+      renderTopHandsSidebar();
+      updateHudIdentityAndRank();
+    }
+
+    // =========================================================================
+    // 9. MODALS (2026 CARD, LEADERBOARD, 4-STEP TOUR)
+    // =========================================================================
+    function openCardModal() {
+      SoundFX.click();
+      const body = document.getElementById('full-card-body');
+      const bySection = {};
+      HANDS_2026.forEach(h => { (bySection[h.section] = bySection[h.section] || []).push(h); });
+      body.innerHTML = Object.entries(bySection).map(([sec, hands]) => `
+        <div class="bg-white border border-stone-300 rounded-xl p-3 space-y-2">
+          <h3 class="font-black text-xs uppercase tracking-wider text-[#245244]">${sec}</h3>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+            ${hands.map(h => `
+              <button onclick="lockBaseHandFromCard('${h.id}')" class="text-left p-2.5 rounded-lg border border-stone-200 hover:border-amber-500 hover:bg-amber-50 transition">
+                <div class="flex justify-between text-xs font-mono font-extrabold text-slate-900">
+                  <span>${h.patternText}</span>
+                  <span class="text-amber-800">${h.points} pts ${h.concealed ? '(C)' : ''}</span>
+                </div>
+                <div class="text-[11px] text-slate-600 mt-0.5">${h.note}</div>
+              </button>
+            `).join('')}
+          </div>
+        </div>
+      `).join('');
+      const modal = document.getElementById('card-modal');
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+
+    function closeCardModal() {
+      document.getElementById('card-modal').classList.add('hidden');
+      document.getElementById('card-modal').classList.remove('flex');
+    }
+
+    function lockBaseHandFromCard(baseId) {
+      const variants = CONCRETE_HANDS.filter(c => c.baseId === baseId);
+      let best = variants[0];
+      let bestDist = 99;
+      variants.forEach(v => {
+        const res = evaluateTilesAgainstConcreteHand(gameState.seats[0].hand, gameState.seats[0].exposures, v);
+        if (!res.dead && res.distance < bestDist) { bestDist = res.distance; best = v; }
+      });
+      if (best) gameState.lockedTargetUid = best.uid;
+      closeCardModal();
+      SoundFX.call();
+      renderAll();
+    }
+
+    function openProgressModal() {
+      SoundFX.click();
+      const { all, myRank } = computeLeaderboardStandings();
+      const acc = playerStats.totalDecisions > 0 ? Math.round((playerStats.optimalDecisions / playerStats.totalDecisions) * 100) : 0;
+      const body = document.getElementById('progress-body');
+      body.innerHTML = `
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+          <div class="bg-white border border-stone-300 rounded-xl p-3 text-center">
+            <div class="text-slate-500 font-bold">Rank</div>
+            <div class="text-xl font-black text-amber-800">#${myRank}</div>
+          </div>
+          <div class="bg-white border border-stone-300 rounded-xl p-3 text-center">
+            <div class="text-slate-500 font-bold">Total Points</div>
+            <div class="text-xl font-black text-slate-900">${playerStats.totalPoints}</div>
+          </div>
+          <div class="bg-white border border-stone-300 rounded-xl p-3 text-center">
+            <div class="text-slate-500 font-bold">Mahjongg Wins</div>
+            <div class="text-xl font-black text-emerald-800">${playerStats.wins}</div>
+          </div>
+          <div class="bg-white border border-stone-300 rounded-xl p-3 text-center">
+            <div class="text-slate-500 font-bold">Coach Alignment</div>
+            <div class="text-xl font-black text-sky-800">${acc}%</div>
+          </div>
+        </div>
+        <div class="bg-white border border-stone-300 rounded-xl overflow-hidden">
+          <div class="px-3 py-2 bg-stone-100 border-b border-stone-200 font-extrabold text-slate-800">2026 Table Standings</div>
+          <div class="divide-y divide-stone-200">
+            ${all.map((p, i) => `
+              <div class="px-3 py-2 flex items-center justify-between ${p.isMe ? 'bg-amber-50 font-extrabold' : ''}">
+                <div class="flex items-center gap-2">
+                  <span class="font-mono w-5 text-slate-500">#${i + 1}</span>
+                  <span>${p.name}</span>
+                  <span class="text-[10px] bg-stone-100 border border-stone-200 px-1.5 rounded">${p.badge}</span>
+                </div>
+                <div class="font-mono text-slate-800">${p.points} pts • ${p.wins}W</div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `;
+      const modal = document.getElementById('progress-modal');
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+
+    function closeProgressModal() {
+      document.getElementById('progress-modal').classList.add('hidden');
+      document.getElementById('progress-modal').classList.remove('flex');
+    }
+
+    const TOUR_STEPS = [
+      { title: 'Your Goal & Color-Coded Tiles', body: 'Match 14 tiles to any pattern on the <strong>2026 NMJL Card</strong>. Tiles with a <span class="text-emerald-700 font-bold">Green Top Bar</span> match your top pattern; <span class="text-rose-600 font-bold">Red-Dashed</span> tiles are safe to swap or discard.' },
+      { title: 'Step 1: The Charleston Tile Swap', body: 'Before regular turns start, pass <strong>3 unwanted tiles</strong> three times (Right, Across, Left). Jokers can never be passed. Use <em>Auto-Swap Best 3</em> anytime!' },
+      { title: 'Step 2: Draw, Discard & Call', body: 'On your turn you draw 1 tile and discard 1 tile (tap a tile twice to throw it). When opponents discard a tile that completes a <strong>Pung (3)</strong> or <strong>Kong (4)</strong> in an exposed pattern, you can call it!' },
+      { title: 'Coach Tsege & Live Telemetry', body: 'Coach Tsege grades every move in real time, and the <strong>⚙️ AI Pipeline & Live JSONL</strong> button in the bottom-right corner lets you inspect or export your session trajectories.' }
+    ];
+    let currentTourStep = 0;
+
+    function openOnboardingTour(step = 0) {
+      currentTourStep = step;
+      renderTourStep();
+      const modal = document.getElementById('walkthrough-modal');
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+    function closeOnboardingTour() {
+      document.getElementById('walkthrough-modal').classList.add('hidden');
+      document.getElementById('walkthrough-modal').classList.remove('flex');
+    }
+    function stepOnboardingTour(delta) {
+      if (currentTourStep + delta >= TOUR_STEPS.length) {
+        closeOnboardingTour();
+        return;
+      }
+      currentTourStep = Math.max(0, currentTourStep + delta);
+      renderTourStep();
+    }
+    function renderTourStep() {
+      const s = TOUR_STEPS[currentTourStep];
+      document.getElementById('tour-step-badge').textContent = `Step ${currentTourStep + 1} of ${TOUR_STEPS.length}`;
+      document.getElementById('tour-step-title').textContent = s.title;
+      document.getElementById('tour-step-body').innerHTML = `<p class="text-sm text-slate-700 leading-relaxed bg-white p-4 rounded-2xl border border-stone-200">${s.body}</p>`;
+      document.getElementById('tour-prev-btn').disabled = currentTourStep === 0;
+      document.getElementById('tour-next-btn').textContent = currentTourStep === TOUR_STEPS.length - 1 ? 'Start Playing →' : 'Next Step →';
+      document.getElementById('tour-dots').innerHTML = TOUR_STEPS.map((_, i) => `<span class="w-2 h-2 rounded-full ${i === currentTourStep ? 'bg-[#245244]' : 'bg-stone-300'}"></span>`).join('');
+    }
+
+    // Boot table immediately so the board is live behind the welcome splash
+    initNewGame(false);
+    openWelcomeScreen(false);
+  </script>
+
+  <!-- v6 ONNX Runtime & Browser Bridge -->
+  <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/ort.min.js"></script>
+  <script src="./onnx-browser-hook.js"></script>
+
+  <!-- Portfolio Architecture & Live Telemetry Inspector Modal -->
+  <button id="archInspectorBtn" onclick="toggleArchModal()" style="
+    position: fixed; bottom: 16px; right: 16px; z-index: 9998;
+    background: #0f172a; color: #f8fafc; border: 1px solid #38bdf8;
+    padding: 10px 16px; border-radius: 999px; font-family: system-ui, sans-serif;
+    font-size: 13px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 14px rgba(0,0,0,0.35);">
+    ⚙️ AI Pipeline &amp; Live JSONL
+  </button>
+
+  <div id="archModal" style="
+    display: none; position: fixed; inset: 0; z-index: 9999;
+    background: rgba(2, 6, 23, 0.82); backdrop-filter: blur(4px);
+    align-items: center; justify-content: center; padding: 20px; font-family: system-ui, sans-serif;">
+    <div style="
+      background: #0f172a; color: #e2e8f0; border: 1px solid #334155;
+      border-radius: 14px; max-width: 760px; width: 100%; max-height: 88vh;
+      overflow-y: auto; padding: 24px; box-shadow: 0 20px 40px rgba(0,0,0,0.5);">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+        <h2 style="margin: 0; font-size: 18px; color: #38bdf8;">System Architecture &amp; v6 ONNX Pipeline</h2>
+        <button onclick="toggleArchModal()" style="background: none; border: none; color: #94a3b8; font-size: 22px; cursor: pointer;">&times;</button>
+      </div>
+
+      <p style="font-size: 13px; color: #cbd5e1; line-height: 1.5; margin-bottom: 16px;">
+        <strong>Zero-Server Frozen Architecture:</strong> Evaluates ~1,200 combinatorial hand vectors locally, logs structured
+        <code>(State &rarr; Action &rarr; Outcome)</code> JSONL trajectories, and runs v6 persona-trained inference client-side.
+      </p>
+
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 16px; font-size: 12px;">
+        <div style="background: #1e293b; padding: 10px; border-radius: 8px; border-left: 3px solid #38bdf8;">
+          <strong>v1–v2 Rules Core</strong><br><span style="color: #94a3b8;">~1,200 Pattern Vectors &amp; State Rollbacks</span>
+        </div>
+        <div style="background: #1e293b; padding: 10px; border-radius: 8px; border-left: 3px solid #10b981;">
+          <strong>v3–v4 Telemetry</strong><br><span style="color: #94a3b8;">Coach Heuristics &amp; JSONL Ring Buffer</span>
+        </div>
+        <div style="background: #1e293b; padding: 10px; border-radius: 8px; border-left: 3px solid #a855f7;">
+          <strong>v5/v6 Self-Play</strong><br><span style="color: #94a3b8;">3 Bot Personas &rarr; .onnx Browser Model</span>
+        </div>
+      </div>
+
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+        <span style="font-size: 12px; font-weight: 600; color: #94a3b8;">LIVE SESSION TELEMETRY STREAM (JSONL)</span>
+        <button onclick="downloadSampleJsonl()" style="
+          background: #0284c7; color: #fff; border: none; padding: 5px 12px;
+          border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer;">
+          Download Sample .jsonl
+        </button>
+      </div>
+
+      <pre id="liveJsonlPreview" style="
+        background: #020617; color: #34d399; padding: 12px; border-radius: 8px;
+        font-size: 11px; overflow-x: auto; max-height: 210px; border: 1px solid #1e293b; margin: 0;"></pre>
+    </div>
+  </div>
+
+  <script>
+    function toggleArchModal() {
+      const modal = document.getElementById('archModal');
+      const isOpen = modal.style.display === 'flex';
+      modal.style.display = isOpen ? 'none' : 'flex';
+      if (!isOpen) refreshJsonlPreview();
+    }
+
+    function getSessionTelemetryRecords() {
+      const liveEvents = (window.TelemetryLogger && Array.isArray(window.TelemetryLogger.buffer))
+        ? window.TelemetryLogger.buffer
+        : [];
+      if (liveEvents.length > 0) return liveEvents;
+
+      return [
+        {
+          game_id: "sim_demo_001",
+          turn: 14,
+          seat: 0,
+          persona: "defensive_hoarder",
+          state: { turn: 14, exposedCount: 1, minPatternDistance: 3, jokerCount: 2 },
+          action: { type: "DISCARD", tile: "7_DOT", coach_alignment: "OPTIMAL" },
+          outcome: { won_hand: 1, dealt_in: 0 }
+        }
+      ];
+    }
+
+    function refreshJsonlPreview() {
+      const lines = getSessionTelemetryRecords().slice(-5).map(r => JSON.stringify(r)).join('\n');
+      document.getElementById('liveJsonlPreview').textContent = lines;
+    }
+
+    function downloadSampleJsonl() {
+      const content = getSessionTelemetryRecords().map(r => JSON.stringify(r)).join('\n') + '\n';
+      const blob = new Blob([content], { type: 'application/x-ndjson' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'mahjongg_v6_telemetry_sample.jsonl';
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+  </script>
+</body>
+</html>
