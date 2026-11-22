@@ -1,10 +1,12 @@
-<!DOCTYPE html>
+  <style><!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="theme-color" content="#1e3f35" />
   <title>2026 American Mahjongg — AI Engine & Coach Tsege</title>
+  <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/ort.min.js"></script>
+  <script src="./onnx-browser-hook.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@600;700;800&display=swap" rel="stylesheet">
   <style>
@@ -14,6 +16,10 @@
       --rail-top: #5c341d;
       --rail-bottom: #381e0f;
       --rail-border: #251309;
+      --skin-tone-1: #8D5524; /* Warm Caramel / Chestnut */
+      --skin-tone-2: #6F3E1D; /* Rich Umber / Mahogany */
+      --skin-tone-3: #4E2A14; /* Deep Espresso */
+      --skin-tone-4: #361C0E; /* Rich Ebony */
     }
     body { font-family: 'Inter', sans-serif; background-color: #26170e; color: #1e293b; user-select: none; overflow-x: hidden; }
     .table-room { background: radial-gradient(circle at 50% 35%, #3b2416 0%, #1d1109 100%); perspective: 1150px; }
@@ -39,6 +45,28 @@
     @keyframes pulseCall { 0%, 100% { box-shadow: 0 0 0 0 rgba(251, 191, 36, 0.7); } 50% { box-shadow: 0 0 0 8px rgba(251, 191, 36, 0); } }
     .pulse-alert { animation: pulseCall 1.4s infinite; }
     .coach-speech-bubble { position: relative; }
+    .coach-speech-bubble::before { content: ""; position: absolute; left: -10px; top: 18px; width: 0; height: 0; border-top: 8px solid transparent; border-bottom: 8px solid transparent; border-right: 11px solid #fbbf24; }
+    .coach-speech-bubble::after { content: ""; position: absolute; left: -7px; top: 19px; width: 0; height: 0; border-top: 7px solid transparent; border-bottom: 7px solid transparent; border-right: 9px solid #ffffff; }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #e7e2d6; }
+    ::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 9999px; }
+
+    /* 4 Dark Skin-Tone Player Hand Palettes */
+    .player-hand-1, [data-seat="0"] .player-hand { background-color: var(--skin-tone-1); color: #FDF8F5; }
+    .player-hand-2, [data-seat="1"] .player-hand { background-color: var(--skin-tone-2); color: #FDF8F5; }
+    .player-hand-3, [data-seat="2"] .player-hand { background-color: var(--skin-tone-3); color: #FDF8F5; }
+    .player-hand-4, [data-seat="3"] .player-hand { background-color: var(--skin-tone-4); color: #FDF8F5; }
+
+    /* Subtle attention ring on Start Game for first-time visitors */
+    @keyframes startPulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(56, 189, 248, 0.55); }
+      50% { box-shadow: 0 0 0 8px rgba(56, 189, 248, 0); }
+    }
+    .first-visit-start-pulse {
+      animation: startPulse 2.2s infinite;
+    }
+  </style>
+</head>
     .coach-speech-bubble::before { content: ""; position: absolute; left: -10px; top: 18px; width: 0; height: 0; border-top: 8px solid transparent; border-bottom: 8px solid transparent; border-right: 11px solid #fbbf24; }
     .coach-speech-bubble::after { content: ""; position: absolute; left: -7px; top: 19px; width: 0; height: 0; border-top: 7px solid transparent; border-bottom: 7px solid transparent; border-right: 9px solid #ffffff; }
    <style>
@@ -2185,6 +2213,71 @@
   <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/ort.min.js"></script>
   <script src="./onnx-browser-hook.js"></script>
 
+    <head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#1e3f35" />
+  <title>2026 American Mahjongg — AI Engine & Coach Tsege</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --felt-center: #326c5b;
+      --felt-edge: #1e463a;
+      --rail-top: #5c341d;
+      --rail-bottom: #381e0f;
+      --rail-border: #251309;
+      --skin-tone-1: #8D5524; /* Warm Caramel / Chestnut */
+      --skin-tone-2: #6F3E1D; /* Rich Umber / Mahogany */
+      --skin-tone-3: #4E2A14; /* Deep Espresso */
+      --skin-tone-4: #361C0E; /* Rich Ebony */
+    }
+    body { font-family: 'Inter', sans-serif; background-color: #26170e; color: #1e293b; user-select: none; overflow-x: hidden; }
+    .table-room { background: radial-gradient(circle at 50% 35%, #3b2416 0%, #1d1109 100%); perspective: 1150px; }
+    .mahogany-frame { background: linear-gradient(180deg, var(--rail-top) 0%, var(--rail-bottom) 100%); border: 4px solid var(--rail-border); border-radius: 26px; box-shadow: 0 24px 48px rgba(0,0,0,0.65), inset 0 2px 3px rgba(255,224,180,0.25), inset 0 -4px 10px rgba(0,0,0,0.6); padding: 12px; position: relative; }
+    .felt-surface { background-color: var(--felt-edge); background-image: radial-gradient(circle at 50% 42%, var(--felt-center) 0%, var(--felt-edge) 100%), repeating-linear-gradient(45deg, rgba(255,255,255,0.015) 0px, rgba(255,255,255,0.015) 2px, transparent 2px, transparent 4px); border-radius: 16px; box-shadow: inset 0 6px 22px rgba(0,0,0,0.55); transform: rotateX(4deg); transform-origin: center bottom; position: relative; overflow: hidden; }
+    .wall-brick { width: 15px; height: 11px; background: linear-gradient(180deg, #347561 0%, #204c3f 100%); border: 1px solid #a7f3d0; border-bottom: 3px solid #132e26; border-radius: 3px; box-shadow: 0 2px 3px rgba(0,0,0,0.45); }
+    .wall-brick-side { width: 11px; height: 14px; background: linear-gradient(90deg, #347561 0%, #204c3f 100%); border: 1px solid #a7f3d0; border-right: 3px solid #132e26; border-radius: 3px; box-shadow: 2px 2px 3px rgba(0,0,0,0.45); }
+    .wooden-rack { background: linear-gradient(180deg, #7c4727 0%, #562f18 55%, #3d200f 100%); border: 2px solid #2b160a; border-top: 3px solid #a6683e; border-radius: 18px; box-shadow: 0 14px 28px rgba(0,0,0,0.55), inset 0 2px 4px rgba(255,220,185,0.25); }
+    .wooden-rack-ledge { background: linear-gradient(180deg, #432311 0%, #68391e 100%); border: 1.5px solid #291409; border-radius: 12px; box-shadow: inset 0 4px 10px rgba(0,0,0,0.55); }
+    .mj-tile { background: linear-gradient(180deg, #ffffff 0%, #fbf9f4 78%, #e8e0cf 100%); border: 1.5px solid #cbd5e1; border-bottom: 5px solid #245244; border-right: 2px solid #94a3b8; border-radius: 9px; box-shadow: 0 4px 7px rgba(15,23,42,0.35); transition: transform 0.16s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.16s ease, border-color 0.16s ease; position: relative; display: inline-flex; flex-direction: column; align-items: center; justify-content: space-between; cursor: pointer; }
+    .mj-tile:hover:not(.mj-small) { transform: translateY(-7px) scale(1.03); box-shadow: 0 10px 18px rgba(15,23,42,0.45); }
+    .mj-tile.selected { transform: translateY(-15px) scale(1.04); border-color: #d97706; border-bottom-color: #b45309; box-shadow: 0 0 0 3px #fbbf24, 0 14px 22px rgba(15,23,42,0.5); }
+    .mj-tile.hint-drop { outline: 2.5px dashed #fb7185; outline-offset: 2px; }
+    .mj-tile.hint-keep { border-top: 4px solid #10b981; }
+    .mj-tile.mj-small { width: 34px; height: 46px; border-bottom-width: 3px; border-radius: 6px; cursor: default; }
+    .mj-tile.mj-rack { width: 50px; height: 70px; }
+    @media (min-width: 768px) { .mj-tile.mj-rack { width: 58px; height: 80px; } }
+    .mj-tile-back { background: linear-gradient(180deg, #33705e 0%, #224d40 100%); border: 1px solid #a7f3d0; border-bottom: 3px solid #143027; border-radius: 5px; box-shadow: 0 2px 4px rgba(0,0,0,0.35); }
+    @keyframes reachDraw { 0% { opacity: 0; transform: translate(70px, 95px) rotate(-18deg) scale(0.92); } 45% { opacity: 0.92; transform: translate(0px, 0px) rotate(-6deg) scale(1); } 100% { opacity: 0; transform: translate(45px, 85px) rotate(-12deg) scale(0.95); } }
+    @keyframes reachDiscard { 0% { opacity: 0; transform: translate(20px, 90px) rotate(12deg) scale(0.92); } 45% { opacity: 0.92; transform: translate(0px, -18px) rotate(4deg) scale(1); } 100% { opacity: 0; transform: translate(35px, 90px) rotate(14deg) scale(0.95); } }
+    .anim-reach-draw { animation: reachDraw 0.52s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
+    .anim-reach-discard { animation: reachDiscard 0.52s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
+    @keyframes pulseCall { 0%, 100% { box-shadow: 0 0 0 0 rgba(251, 191, 36, 0.7); } 50% { box-shadow: 0 0 0 8px rgba(251, 191, 36, 0); } }
+    .pulse-alert { animation: pulseCall 1.4s infinite; }
+    .coach-speech-bubble { position: relative; }
+    .coach-speech-bubble::before { content: ""; position: absolute; left: -10px; top: 18px; width: 0; height: 0; border-top: 8px solid transparent; border-bottom: 8px solid transparent; border-right: 11px solid #fbbf24; }
+    .coach-speech-bubble::after { content: ""; position: absolute; left: -7px; top: 19px; width: 0; height: 0; border-top: 7px solid transparent; border-bottom: 7px solid transparent; border-right: 9px solid #ffffff; }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #e7e2d6; }
+    ::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 9999px; }
+
+    /* 4 Dark Skin-Tone Player Hand Palettes */
+    .player-hand-1, [data-seat="0"] .player-hand { background-color: var(--skin-tone-1); color: #FDF8F5; }
+    .player-hand-2, [data-seat="1"] .player-hand { background-color: var(--skin-tone-2); color: #FDF8F5; }
+    .player-hand-3, [data-seat="2"] .player-hand { background-color: var(--skin-tone-3); color: #FDF8F5; }
+    .player-hand-4, [data-seat="3"] .player-hand { background-color: var(--skin-tone-4); color: #FDF8F5; }
+
+    /* Subtle attention ring on Start Game for first-time visitors */
+    @keyframes startPulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(56, 189, 248, 0.55); }
+      50% { box-shadow: 0 0 0 8px rgba(56, 189, 248, 0); }
+    }
+    .first-visit-start-pulse {
+      animation: startPulse 2.2s infinite;
+    }
+  </style>
+</head>
  <!-- Portfolio Architecture & Live Telemetry Inspector Modal -->
   <button id="archInspectorBtn" onclick="toggleArchModal()" style="
     position: fixed; bottom: 16px; right: 16px; z-index: 9998;
