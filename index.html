@@ -66,6 +66,9 @@
       <button id="ai-demo-toggle-btn" onclick="toggleSimulatedCoachDemo()" class="bg-sky-950 hover:bg-sky-900 border border-sky-400 text-sky-200 font-extrabold px-2.5 py-1 rounded-lg text-xs shadow transition">
         🤖 AI + Coach Demo
       </button>
+      <button id="record-showcase-btn" onclick="startSelfRecordingShowcase()" class="bg-rose-700 hover:bg-rose-600 border border-rose-400 text-white font-extrabold px-2.5 py-1 rounded-lg text-xs shadow transition">
+        🎥 Record AI + Coach (3m)
+      </button>
       <button id="hud-profile-btn" onclick="openWelcomeScreen(true)" class="bg-stone-100 hover:bg-stone-200 border border-stone-300 px-2.5 py-1 rounded-lg text-xs font-bold text-slate-800 flex items-center gap-1.5 transition">
         <span class="w-2 h-2 rounded-full bg-emerald-500" id="cloud-status-dot"></span>
         <span id="hud-player-name">Player</span>
@@ -705,7 +708,7 @@
       { id: 'ADD-2', section: 'Addition Hands', points: 25, concealed: false, patternText: 'FF 2222 + 3333 = 5555', note: '1 suit (2+3=5)', suitCount: 1, groups: [grp('PAIR',2,0,'FLOWER',false), grp('KONG',4,1,2,true), grp('KONG',4,1,3,true), grp('KONG',4,1,5,true)] },
       { id: 'ADD-3', section: 'Addition Hands', points: 25, concealed: false, patternText: 'FF 3333 + 4444 = 7777', note: '3 suits (3+4=7)', suitCount: 3, groups: [grp('PAIR',2,0,'FLOWER',false), grp('KONG',4,1,3,true), grp('KONG',4,2,4,true), grp('KONG',4,3,7,true)] },
       { id: 'ADD-4', section: 'Addition Hands', points: 25, concealed: false, patternText: 'FF 4444 + 5555 = 9999', note: '3 suits (4+5=9)', suitCount: 3, groups: [grp('PAIR',2,0,'FLOWER',false), grp('KONG',4,1,4,true), grp('KONG',4,2,5,true), grp('KONG',4,3,9,true)] },
-      { id: 'QUINT-1', section: 'Quints', points: 40, concealed: false, patternText: 'FF 11111 2222 33333', note: '1 suit (needs at least 1 Joker)', suitCount: 1, groups: [grp('PAIR',2,0,'FLOWER',false), grp('QUINT',5,1,1,true), grp('KONG',4,1,2,true), grp('QUINT',5,1,3,true).count ? grp('PUNG',3,1,3,true) : grp('PUNG',3,1,3,true)] },
+      { id: 'QUINT-1', section: 'Quints', points: 40, concealed: false, patternText: 'FF 11111 2222 33333', note: '1 suit (needs at least 1 Joker)', suitCount: 1, groups: [grp('PAIR',2,0,'FLOWER',false), grp('QUINT',5,1,1,true), grp('KONG',4,1,2,true), grp('PUNG',3,1,3,true)] },
       { id: 'QUINT-2', section: 'Quints', points: 40, concealed: false, patternText: '11111 NNNN 22222', note: '2 suits + any Wind', suitCount: 2, groups: [grp('QUINT',5,1,1,true), grp('KONG',4,0,'WIND_N',true), grp('QUINT',5,2,2,true)] },
       { id: 'QUINT-3', section: 'Quints', points: 45, concealed: false, patternText: 'FFFF 77777 77777', note: '2 suits (shown with 7s)', suitCount: 2, groups: [grp('FLOWER',4,0,'FLOWER',true), grp('QUINT',5,1,7,true), grp('QUINT',5,2,7,true)] },
       { id: 'RUN-1', section: 'Consecutive Run', points: 25, concealed: false, patternText: '11 222 3333 444 55', note: '1 suit (1-2-3-4-5)', suitCount: 1, groups: [grp('PAIR',2,1,1,false), grp('PUNG',3,1,2,true), grp('KONG',4,1,3,true), grp('PUNG',3,1,4,true), grp('PAIR',2,1,5,false)] },
@@ -771,29 +774,85 @@
     }
 
     // =========================================================================
-    // 4. PATTERN EVALUATOR & COACH HEURISTICS
+    // 4. PATTERN EVALUATOR WITH TILE-SCARCITY AWARENESS & EVALUATION CACHE
     // =========================================================================
-    function evaluateTilesAgainstConcreteHand(allTiles, exposures, concreteHand) {
-      if (concreteHand.concealed && exposures.length > 0) return { distance: 99, missingCodes: [], keepCodes: new Set(), dead: true };
-      const counts = {}; let jokers = 0;
-      for (const t of allTiles) { if (t.isJoker) jokers++; else counts[t.code] = (counts[t.code] || 0) + 1; }
-      for (const exp of exposures) {
-        for (const t of exp.tiles) { if (t.isJoker) jokers++; else counts[t.code] = (counts[t.code] || 0) + 1; }
+    function getDiscardFrequencyMap() {
+      const freq = {};
+      for (const d of gameState.discards) {
+        freq[d.tile.code] = (freq[d.tile.code] || 0) + 1;
       }
-      let missing = 0; const missingCodes = []; const keepCodes = new Set();
+      return freq;
+    }
+
+    function getMaxCopiesInDeck(code) {
+      if (code === 'FLOWER' || code === 'JOKER') return 8;
+      return 4;
+    }
+
+    // UPGRADE #2: Tile-scarcity awareness (penalizes scarce tiles & marks impossible dead hands)
+    function evaluateTilesAgainstConcreteHand(allTiles, exposures, concreteHand, discardFreqMap = null) {
+      if (concreteHand.concealed && exposures.length > 0) {
+        return { distance: 99, missingCodes: [], keepCodes: new Set(), dead: true, scarcityPenalty: 99 };
+      }
+
+      const dFreq = discardFreqMap || getDiscardFrequencyMap();
+      const counts = {};
+      const ownedByCode = {};
+      let jokers = 0;
+
+      for (const t of allTiles) {
+        if (t.isJoker) jokers++;
+        else {
+          counts[t.code] = (counts[t.code] || 0) + 1;
+          ownedByCode[t.code] = (ownedByCode[t.code] || 0) + 1;
+        }
+      }
+      for (const exp of exposures) {
+        for (const t of exp.tiles) {
+          if (t.isJoker) jokers++;
+          else {
+            counts[t.code] = (counts[t.code] || 0) + 1;
+            ownedByCode[t.code] = (ownedByCode[t.code] || 0) + 1;
+          }
+        }
+      }
+
+      let missing = 0;
+      let scarcityPenalty = 0;
+      const missingCodes = [];
+      const keepCodes = new Set();
+
       for (const g of concreteHand.groupDefs) {
         keepCodes.add(g.code);
         const have = Math.min(counts[g.code] || 0, g.count);
         counts[g.code] = Math.max(0, (counts[g.code] || 0) - have);
         let deficit = g.count - have;
+
+        // Check if enough live copies exist in wall/other hands to ever complete this group
+        const maxCopies = getMaxCopiesInDeck(g.code);
+        const discardedCount = dFreq[g.code] || 0;
+        const ownedTotal = ownedByCode[g.code] || 0;
+        const stillLiveCopies = Math.max(0, maxCopies - discardedCount - ownedTotal);
+
+        if (deficit > 0) {
+          const maxPossibleWithJokers = stillLiveCopies + (g.jokerAllowed ? jokers : 0);
+          if (maxPossibleWithJokers < deficit) {
+            return { distance: 99, missingCodes: [], keepCodes, dead: true, scarcityPenalty: 99 };
+          }
+          if (discardedCount >= 3) scarcityPenalty += 4.5 * deficit;
+          else if (discardedCount === 2) scarcityPenalty += 1.5 * deficit;
+        }
+
         if (deficit > 0 && g.jokerAllowed && jokers > 0) {
           const useJ = Math.min(deficit, jokers);
-          jokers -= useJ; deficit -= useJ;
+          jokers -= useJ;
+          deficit -= useJ;
         }
         missing += deficit;
         for (let i = 0; i < deficit; i++) missingCodes.push(g.code);
       }
-      return { distance: missing, missingCodes, keepCodes, dead: false };
+
+      return { distance: missing, missingCodes, keepCodes, dead: false, scarcityPenalty };
     }
 
     function getBestHandsForSeat(seatIdx, topN = 3) {
@@ -802,13 +861,14 @@
       const exposures = seat.exposures;
       const lockedUid = seatIdx === 0 ? gameState.lockedTargetUid : seat.aiTargetUid;
       const unlockedTier = Math.min(4, Math.max(1, playerStats.round1TierUnlocked || 1));
+      const dFreq = getDiscardFrequencyMap();
 
       const scored = [];
       for (const ch of CONCRETE_HANDS) {
-        const res = evaluateTilesAgainstConcreteHand(allTiles, exposures, ch);
+        const res = evaluateTilesAgainstConcreteHand(allTiles, exposures, ch, dFreq);
         if (res.dead) continue;
         const tier = getHandDifficultyTier(ch);
-        let rankScore = res.distance * 10 - (ch.points / 25);
+        let rankScore = res.distance * 10 + res.scarcityPenalty - (ch.points / 25);
         if (seatIdx === 0 && !lockedUid) {
           if (tier === unlockedTier) rankScore -= 2.2;
           else if (tier < unlockedTier) rankScore -= 0.8;
@@ -835,11 +895,12 @@
       const top3 = getBestHandsForSeat(seatIdx, 3);
       const hand = gameState.seats[seatIdx].hand;
       const primary = top3[0];
-      if (!primary) return { bestDrop: hand[0], rankedDrops: [], keepIds: new Set(), dropIds: new Set() };
+      if (!primary) return { bestDrop: hand[0], rankedDrops: [], keepIds: new Set(), dropIds: new Set(), top3: [] };
 
       const reqNeeded = { ...primary.concrete.reqCounts };
       const secondaryKeep = new Set();
       top3.slice(1).forEach(h => h.keepCodes.forEach(c => secondaryKeep.add(c)));
+      const dFreq = getDiscardFrequencyMap();
 
       const scoredTiles = hand.map(t => {
         if (t.isJoker) return { tile: t, keepScore: 999, reason: 'Joker is wild — always keep!' };
@@ -849,8 +910,12 @@
           return { tile: t, keepScore: 100 + neededInPrimary * 10, reason: `Matches your #1 pattern (${primary.concrete.patternText})` };
         }
         if (secondaryKeep.has(t.code)) return { tile: t, keepScore: 45, reason: 'Backup tile for your #2/#3 pattern' };
-        const discardSeen = gameState.discards.filter(d => d.tile.code === t.code).length;
-        return { tile: t, keepScore: 10 - discardSeen * 2, reason: 'Not needed for your top 2026 patterns' };
+        const discardSeen = dFreq[t.code] || 0;
+        return {
+          tile: t,
+          keepScore: 10 - discardSeen * 2.5,
+          reason: discardSeen >= 2 ? `Already discarded ${discardSeen}x — safe throw` : 'Not needed for your top 2026 patterns'
+        };
       });
 
       scoredTiles.sort((a, b) => a.keepScore - b.keepScore);
@@ -859,12 +924,38 @@
       return { bestDrop: scoredTiles[0]?.tile || hand[0], rankedDrops: scoredTiles, keepIds, dropIds, top3 };
     }
 
+    // UPGRADE #1: Turn Evaluation Cache for Seat 0
+    let cachedPlayerEvaluation = { key: '', data: null };
+
+    function getPlayerEvaluationCached() {
+      const seat0 = gameState.seats[0];
+      const stateKey = [
+        gameState.roundNumber,
+        gameState.phase,
+        gameState.charlestonStep,
+        gameState.turnSeat,
+        gameState.discards.length,
+        gameState.lockedTargetUid || 'NONE',
+        playerStats.round1TierUnlocked,
+        seat0.hand.map(t => t.id).join(','),
+        seat0.exposures.map(e => `${e.code}:${e.tiles.length}`).join(',')
+      ].join('|');
+
+      if (cachedPlayerEvaluation.key === stateKey && cachedPlayerEvaluation.data) {
+        return cachedPlayerEvaluation.data;
+      }
+      const computed = computeDiscardRecommendations(0);
+      cachedPlayerEvaluation = { key: stateKey, data: computed };
+      return computed;
+    }
+
     function checkSeatCanDeclareMahjongg(seatIdx) {
       const seat = gameState.seats[seatIdx];
       const total = seat.hand.length + seat.exposures.reduce((s, e) => s + e.tiles.length, 0);
       if (total !== 14) return null;
+      const dFreq = getDiscardFrequencyMap();
       for (const ch of CONCRETE_HANDS) {
-        const res = evaluateTilesAgainstConcreteHand(seat.hand, seat.exposures, ch);
+        const res = evaluateTilesAgainstConcreteHand(seat.hand, seat.exposures, ch, dFreq);
         if (!res.dead && res.distance === 0) return ch;
       }
       return null;
@@ -873,7 +964,7 @@
     function checkSeatCanCallDiscard(seatIdx, tile) {
       if (tile.isJoker) return [];
       const seat = gameState.seats[seatIdx];
-      const top3 = getBestHandsForSeat(seatIdx, 3);
+      const top3 = seatIdx === 0 ? getPlayerEvaluationCached().top3 : getBestHandsForSeat(seatIdx, 3);
       const calls = [];
       for (const h of top3) {
         if (h.concrete.concealed) continue;
@@ -918,6 +1009,7 @@
       peekHintsActive: false,
       lastDiscardInfo: null,
       pendingCallsForPlayer: [],
+      pendingWinForPlayer: null,
       seats: [
         { name: 'You (South)', hand: [], exposures: [], aiTargetUid: null },
         { name: 'Evelyn (East)', hand: [], exposures: [], aiTargetUid: null },
@@ -936,6 +1028,7 @@
 
     function initNewGame(incrementRound = false) {
       if (incrementRound) gameState.roundNumber++;
+      cachedPlayerEvaluation = { key: '', data: null };
       const deck = shuffle(buildFullDeck());
       gameState.wall = deck;
       gameState.discards = [];
@@ -947,6 +1040,7 @@
       gameState.lockedTargetUid = null;
       gameState.lastDiscardInfo = null;
       gameState.pendingCallsForPlayer = [];
+      gameState.pendingWinForPlayer = null;
 
       for (let s = 0; s < 4; s++) {
         const dealCount = s === 0 ? 14 : 13;
@@ -1036,7 +1130,7 @@
 
     function executeCharlestonPass(autoPick = false) {
       if (gameState.phase !== 'CHARLESTON') return;
-      const rec = computeDiscardRecommendations(0);
+      const rec = getPlayerEvaluationCached();
       if (autoPick) {
         gameState.selectedTileIds.clear();
         const nonJokers = rec.rankedDrops.filter(r => !r.tile.isJoker).slice(0, 3);
@@ -1047,12 +1141,10 @@
       const stepInfo = CHARLESTON_STEPS[gameState.charlestonStep];
       const passes = [[], [], [], []];
 
-      // Seat 0 chosen 3
       const pHand = gameState.seats[0].hand;
       passes[0] = pHand.filter(t => gameState.selectedTileIds.has(t.id));
       gameState.seats[0].hand = pHand.filter(t => !gameState.selectedTileIds.has(t.id));
 
-      // AI seats choose weakest 3 non-jokers
       for (let s = 1; s <= 3; s++) {
         const sRec = computeDiscardRecommendations(s);
         const drop3 = sRec.rankedDrops.filter(r => !r.tile.isJoker).slice(0, 3).map(r => r.tile);
@@ -1061,7 +1153,6 @@
         gameState.seats[s].hand = gameState.seats[s].hand.filter(t => !dropSet.has(t.id));
       }
 
-      // Distribute according to direction
       for (let s = 0; s < 4; s++) {
         const receiver = (s + stepInfo.dir) % 4;
         gameState.seats[receiver].hand.push(...passes[s]);
@@ -1076,7 +1167,7 @@
         gameState.turnSeat = 0;
         gameState.hasDrawnThisTurn = true;
         sortPlayerHand('suit', true);
-        const nextRec = computeDiscardRecommendations(0);
+        const nextRec = getPlayerEvaluationCached();
         setCoachSpeech(
           'Happy',
           `Charleston complete! You have 14 tiles—tap <strong>${nextRec.bestDrop.label}</strong> (or click <em>Do Best Move For Me</em>) to make the first discard.`
@@ -1091,12 +1182,13 @@
       renderAll();
     }
 
-    function showMoveCritique(tile, bestDrop, topPatternText) {
+    function showMoveCritique(tile, recBefore) {
       const box = document.getElementById('post-move-critique');
       const badge = document.getElementById('critique-grade-badge');
       const label = document.getElementById('critique-move-label');
       const exp = document.getElementById('critique-explanation');
-      const isOptimal = !tile.isJoker && (tile.code === bestDrop.code || !computeDiscardRecommendations(0).keepIds.has(tile.id));
+      const topPatternText = recBefore.top3[0]?.concrete.patternText || '2026 Hand';
+      const isOptimal = !tile.isJoker && (tile.code === recBefore.bestDrop.code || !recBefore.keepIds.has(tile.id));
 
       playerStats.totalDecisions++;
       if (isOptimal) playerStats.optimalDecisions++;
@@ -1112,7 +1204,7 @@
         box.classList.add('bg-amber-50', 'border-amber-400');
         badge.className = 'font-bold text-[11px] px-2 py-0.5 rounded uppercase bg-amber-200 text-amber-950';
         badge.textContent = '💡 COACH TIP';
-        exp.innerHTML = `You threw <strong>${tile.label}</strong>, which matched your top pattern. <strong>${bestDrop.label}</strong> was safer to let go.`;
+        exp.innerHTML = `You threw <strong>${tile.label}</strong>, which matched your top pattern. <strong>${recBefore.bestDrop.label}</strong> was safer to let go.`;
       }
       label.textContent = `Turn ${gameState.discards.length + 1}`;
       return isOptimal ? 'OPTIMAL' : 'SUBOPTIMAL';
@@ -1124,12 +1216,12 @@
       const idx = hand.findIndex(t => t.id === tileId);
       if (idx === -1) return;
 
-      const recBefore = computeDiscardRecommendations(0);
+      const recBefore = getPlayerEvaluationCached();
       const [thrown] = hand.splice(idx, 1);
       gameState.selectedTileIds.clear();
       gameState.peekHintsActive = false;
 
-      const alignment = showMoveCritique(thrown, recBefore.bestDrop, recBefore.top3[0]?.concrete.patternText || '2026 Hand');
+      const alignment = showMoveCritique(thrown, recBefore);
       SoundFX.clack();
       triggerTableReachAnimation('discard');
 
@@ -1157,11 +1249,9 @@
     }
 
     function resolveDiscardAndAdvance(discarderSeat, tile) {
-      // Check if an AI wants to call for Mahjongg or Exposure
       for (let offset = 1; offset <= 3; offset++) {
         const seatIdx = (discarderSeat + offset) % 4;
         if (seatIdx === 0) continue;
-        // Check AI win on discard
         gameState.seats[seatIdx].hand.push(tile);
         const winHand = checkSeatCanDeclareMahjongg(seatIdx);
         gameState.seats[seatIdx].hand.pop();
@@ -1170,7 +1260,6 @@
           finishRoundWithWinner(seatIdx, winHand, true);
           return;
         }
-        // Check AI Pung/Kong call (Marcus calls aggressively, others selectively)
         const calls = checkSeatCanCallDiscard(seatIdx, tile);
         const callProb = seatIdx === 2 ? 0.72 : (seatIdx === 1 ? 0.45 : 0.15);
         if (calls.length > 0 && Math.random() < callProb) {
@@ -1179,7 +1268,6 @@
         }
       }
 
-      // Check if Human (Seat 0) can call this discard
       if (discarderSeat !== 0) {
         gameState.seats[0].hand.push(tile);
         const playerWin = checkSeatCanDeclareMahjongg(0);
@@ -1236,7 +1324,7 @@
 
       if (seatIdx === 0) {
         sortPlayerHand('suit', true);
-        const rec = computeDiscardRecommendations(0);
+        const rec = getPlayerEvaluationCached();
         setCoachSpeech('Proud', `Awesome call! Your <strong>${callObj.label} of ${discardedTile.label}</strong> is exposed on your rack. Now discard <strong>${rec.bestDrop.label}</strong>.`);
         renderAll();
       } else {
@@ -1262,7 +1350,7 @@
         triggerTableReachAnimation('draw');
         sortPlayerHand('suit', true);
         const winHand = checkSeatCanDeclareMahjongg(0);
-        const rec = computeDiscardRecommendations(0);
+        const rec = getPlayerEvaluationCached();
         if (winHand) {
           setCoachSpeech('Proud', `🎉 YOU DREW <strong>${drawn.label}</strong> FOR MAHJONGG! Click the golden <strong>DECLARE MAHJONGG!</strong> button right now!`);
         } else {
@@ -1271,7 +1359,7 @@
         renderAll();
       } else {
         renderAll();
-        setTimeout(() => runAiTurnDiscard(nextSeat), simulatedDemoActive ? 380 : 520);
+        setTimeout(() => runAiTurnDiscard(nextSeat), simulatedDemoActive ? 420 : 520);
       }
     }
 
@@ -1328,18 +1416,22 @@
           finishRoundWithWinner(0, winHand, false);
           return;
         }
-        const rec = computeDiscardRecommendations(0);
+        const rec = getPlayerEvaluationCached();
         if (rec.bestDrop) discardPlayerTile(rec.bestDrop.id);
       }
     }
 
-  // =========================================================================
-    // 6. TIMED 3-MINUTE AI + COACH SHOWCASE MODE (FOR SCREEN RECORDING)
+    // =========================================================================
+    // 6. SPEECH-SYNCED SELF-RECORDING AI + COACH TSEGE SHOWCASE (3 MIN)
     // =========================================================================
     let simulatedDemoActive = false;
-    let simulatedDemoTimer = null;
+    let showcaseClockTimer = null;
+    let showcaseStepTimeout = null;
     let showcaseStartTime = null;
-    const SHOWCASE_TARGET_MS = 180000; // 3 minutes (180 seconds) — right in the 2-4 min sweet spot
+    let mediaRecorder = null;
+    let recordedChunks = [];
+    let activeCaptureStream = null;
+    const SHOWCASE_TARGET_MS = 180000; // 3 minutes (within 2-4 minute target)
 
     function formatShowcaseClock(ms) {
       const totalSec = Math.floor(ms / 1000);
@@ -1348,68 +1440,213 @@
       return `${mins}:${secs}`;
     }
 
+    // UPGRADE #3: Speech-synced callback so Coach Tsege never cuts herself off mid-sentence
+    function speakCoachLine(plainText, onFinishedCallback = null) {
+      if (!('speechSynthesis' in window)) {
+        if (onFinishedCallback) setTimeout(onFinishedCallback, 1200);
+        return;
+      }
+      window.speechSynthesis.cancel();
+      const utter = new SpeechSynthesisUtterance(plainText);
+      utter.rate = 1.05;
+      utter.pitch = 1.08;
+
+      let settled = false;
+      const done = () => {
+        if (settled) return;
+        settled = true;
+        if (onFinishedCallback) onFinishedCallback();
+      };
+
+      // Safety fallback in case browser speechSynthesis stalls or tab loses focus
+      const safetyMs = Math.min(6500, Math.max(1500, plainText.length * 68));
+      const fallbackTimer = setTimeout(done, safetyMs);
+
+      utter.onend = () => {
+        clearTimeout(fallbackTimer);
+        setTimeout(done, 250);
+      };
+      utter.onerror = () => {
+        clearTimeout(fallbackTimer);
+        done();
+      };
+
+      window.speechSynthesis.speak(utter);
+    }
+
+    async function startSelfRecordingShowcase() {
+      if (mediaRecorder && mediaRecorder.state === 'recording') {
+        stopSelfRecordingShowcase();
+        return;
+      }
+      try {
+        activeCaptureStream = await navigator.mediaDevices.getDisplayMedia({
+          video: { frameRate: 30 },
+          audio: true,
+          preferCurrentTab: true
+        });
+
+        recordedChunks = [];
+        const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9,opus')
+          ? 'video/webm;codecs=vp9,opus'
+          : 'video/webm';
+
+        mediaRecorder = new MediaRecorder(activeCaptureStream, { mimeType });
+
+        mediaRecorder.ondataavailable = (e) => {
+          if (e.data && e.data.size > 0) recordedChunks.push(e.data);
+        };
+
+        mediaRecorder.onstop = () => {
+          const blob = new Blob(recordedChunks, { type: mimeType });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `mahjongg-ai-coach-tsege-walkthrough-${Date.now()}.webm`;
+          a.click();
+          URL.revokeObjectURL(url);
+
+          if (activeCaptureStream) {
+            activeCaptureStream.getTracks().forEach(track => track.stop());
+            activeCaptureStream = null;
+          }
+          const recBtn = document.getElementById('record-showcase-btn');
+          if (recBtn) recBtn.textContent = '🎥 Record AI + Coach (3m)';
+        };
+
+        activeCaptureStream.getVideoTracks()[0].onended = () => {
+          if (simulatedDemoActive) toggleSimulatedCoachDemo();
+          if (mediaRecorder && mediaRecorder.state === 'recording') mediaRecorder.stop();
+        };
+
+        mediaRecorder.start(1000);
+        const recBtn = document.getElementById('record-showcase-btn');
+        if (recBtn) recBtn.textContent = '⏹ Stop & Save Video';
+
+        if (!simulatedDemoActive) toggleSimulatedCoachDemo();
+      } catch (err) {
+        setCoachSpeech('Alert', 'Screen capture was canceled. Click <strong>🎥 Record AI + Coach (3m)</strong> and select <strong>This Tab</strong> to record.');
+      }
+    }
+
+    function stopSelfRecordingShowcase() {
+      if (simulatedDemoActive) toggleSimulatedCoachDemo();
+      if (mediaRecorder && mediaRecorder.state === 'recording') {
+        mediaRecorder.stop();
+      }
+      if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+    }
+
+    function runSpeechSyncedDemoStep() {
+      if (!simulatedDemoActive) return;
+
+      const elapsed = Date.now() - showcaseStartTime;
+      if (elapsed >= SHOWCASE_TARGET_MS && gameState.phase === 'ROUND_OVER') {
+        setCoachSpeech(
+          'Proud',
+          '🎬 <strong>3-Minute Recorded Walkthrough Complete!</strong> Your video file is downloading automatically.'
+        );
+        speakCoachLine('Walkthrough complete! Saving your recorded video now.', () => {
+          stopSelfRecordingShowcase();
+        });
+        return;
+      }
+
+      if (gameState.phase === 'ROUND_OVER') {
+        startNextRound();
+        showcaseStepTimeout = setTimeout(runSpeechSyncedDemoStep, 700);
+        return;
+      }
+
+      if (gameState.phase === 'CHARLESTON') {
+        const rec = getPlayerEvaluationCached();
+        const dropNames = rec.rankedDrops.filter(r => !r.tile.isJoker).slice(0, 3).map(r => r.tile.label).join(', ');
+        const targetName = rec.top3[0]?.concrete.patternText || '2026 pattern';
+        setCoachSpeech('Thinking', `🔄 <strong>Charleston Step ${gameState.charlestonStep + 1}/3:</strong> Passing weakest tiles (<em>${dropNames}</em>) to build toward <strong>${targetName}</strong>.`);
+        speakCoachLine(`Charleston pass ${gameState.charlestonStep + 1}. Passing ${dropNames} to build ${targetName}.`, () => {
+          if (!simulatedDemoActive) return;
+          performRecommendedAction();
+          showcaseStepTimeout = setTimeout(runSpeechSyncedDemoStep, 350);
+        });
+        return;
+      }
+
+      if (gameState.phase === 'CLAIM_WINDOW') {
+        if (gameState.pendingWinForPlayer) {
+          const tileLbl = gameState.lastDiscardInfo.tile.label;
+          setCoachSpeech('Proud', `🎉 <strong>Winning Tile Discarded!</strong> Calling <strong>${tileLbl}</strong> to declare Mahjongg!`);
+          speakCoachLine(`Winning tile discarded! Calling ${tileLbl} for Mahjongg!`, () => {
+            if (!simulatedDemoActive) return;
+            performRecommendedAction();
+            showcaseStepTimeout = setTimeout(runSpeechSyncedDemoStep, 500);
+          });
+        } else if (gameState.pendingCallsForPlayer.length > 0) {
+          const tileLbl = gameState.lastDiscardInfo.tile.label;
+          const callLbl = gameState.pendingCallsForPlayer[0].label;
+          setCoachSpeech('Alert', `⚡ <strong>Coach Call:</strong> Claiming <strong>${tileLbl}</strong> for a <strong>${callLbl}</strong>!`);
+          speakCoachLine(`Claiming ${tileLbl} for a ${callLbl}.`, () => {
+            if (!simulatedDemoActive) return;
+            performRecommendedAction();
+            showcaseStepTimeout = setTimeout(runSpeechSyncedDemoStep, 350);
+          });
+        } else {
+          performRecommendedAction();
+          showcaseStepTimeout = setTimeout(runSpeechSyncedDemoStep, 350);
+        }
+        return;
+      }
+
+      if (gameState.phase === 'PLAY' && gameState.turnSeat === 0 && gameState.hasDrawnThisTurn) {
+        const rec = getPlayerEvaluationCached();
+        const targetName = rec.top3[0]?.concrete.patternText || '2026 Hand';
+        const dist = rec.top3[0]?.distance ?? '?';
+        const dropLbl = rec.bestDrop?.label || 'tile';
+        setCoachSpeech(
+          'Happy',
+          `🎯 <strong>Target: ${targetName}</strong> (${dist} away). Discarding <strong>${dropLbl}</strong> — ${rec.rankedDrops[0]?.reason || 'lowest pattern value'}.`
+        );
+        speakCoachLine(`Target ${targetName}, ${dist} away. Discarding ${dropLbl}.`, () => {
+          if (!simulatedDemoActive) return;
+          performRecommendedAction();
+          showcaseStepTimeout = setTimeout(runSpeechSyncedDemoStep, 350);
+        });
+        return;
+      }
+
+      // Wait briefly while AI seats (Evelyn, Marcus, Clara) finish their turns
+      showcaseStepTimeout = setTimeout(runSpeechSyncedDemoStep, 450);
+    }
+
     function toggleSimulatedCoachDemo() {
       simulatedDemoActive = !simulatedDemoActive;
       const btn = document.getElementById('ai-demo-toggle-btn');
 
       if (simulatedDemoActive) {
         showcaseStartTime = Date.now();
-        btn.classList.add('ring-2', 'ring-rose-400', 'bg-rose-950', 'text-rose-200');
+        btn.classList.add('ring-2', 'ring-amber-300');
         document.getElementById('welcome-modal').classList.add('hidden');
         document.getElementById('welcome-modal').classList.remove('flex');
 
         setCoachSpeech(
           'Demo',
-          '🎬 <strong>3-Minute AI + Coach Showcase Started!</strong> Watch me guide the AI through the Charleston swap, pattern locking, live calls, and JSONL telemetry.'
+          '🎬 <strong>AI + Coach Tsege Live Session Started!</strong> Watching the 2026 NMJL card, Charleston swaps, and real-time discards.'
         );
 
-        simulatedDemoTimer = setInterval(() => {
+        showcaseClockTimer = setInterval(() => {
           if (!simulatedDemoActive) return;
-
           const elapsed = Date.now() - showcaseStartTime;
-          btn.textContent = `⏹ Showcase ${formatShowcaseClock(elapsed)} / 03:00`;
+          btn.textContent = `⏹ AI Playing ${formatShowcaseClock(elapsed)} / 03:00`;
+        }, 500);
 
-          // Stop cleanly once 3 minutes have passed AND the current hand finishes
-          if (elapsed >= SHOWCASE_TARGET_MS && gameState.phase === 'ROUND_OVER') {
-            toggleSimulatedCoachDemo();
-            setCoachSpeech(
-              'Proud',
-              '🎬 <strong>3-Minute Showcase Complete!</strong> Click <em>⚙️ AI Pipeline & Live JSONL</em> in the bottom-right to inspect or download the recorded session data.'
-            );
-            return;
-          }
-
-          if (gameState.phase === 'ROUND_OVER') {
-            startNextRound();
-            return;
-          }
-
-          // Narrate Coach Tsege's reasoning before executing each AI move
-          if (gameState.phase === 'CHARLESTON') {
-            const rec = computeDiscardRecommendations(0);
-            const dropNames = rec.rankedDrops.filter(r => !r.tile.isJoker).slice(0, 3).map(r => r.tile.label).join(', ');
-            setCoachSpeech('Thinking', `🔄 <strong>Charleston Step ${gameState.charlestonStep + 1}/3:</strong> Passing weakest tiles (<em>${dropNames}</em>) to build toward <strong>${rec.top3[0]?.concrete.patternText}</strong>.`);
-            performRecommendedAction();
-          } else if (gameState.phase === 'CLAIM_WINDOW') {
-            if (gameState.pendingWinForPlayer) {
-              setCoachSpeech('Proud', `🎉 <strong>Winning Tile Discarded!</strong> Calling <strong>${gameState.lastDiscardInfo.tile.label}</strong> to declare Mahjongg!`);
-            } else if (gameState.pendingCallsForPlayer.length > 0) {
-              setCoachSpeech('Alert', `⚡ <strong>Coach Call:</strong> Claiming <strong>${gameState.lastDiscardInfo.tile.label}</strong> for a <strong>${gameState.pendingCallsForPlayer[0].label}</strong>!`);
-            }
-            performRecommendedAction();
-          } else if (gameState.phase === 'PLAY' && gameState.turnSeat === 0 && gameState.hasDrawnThisTurn) {
-            const rec = computeDiscardRecommendations(0);
-            setCoachSpeech(
-              'Happy',
-              `🎯 <strong>Target: ${rec.top3[0]?.concrete.patternText}</strong> (${rec.top3[0]?.distance} tiles away). Discarding <strong>${rec.bestDrop?.label}</strong> — ${rec.rankedDrops[0]?.reason || 'lowest pattern value'}.`
-            );
-            performRecommendedAction();
-          }
-        }, 1650); // 1.65s pacing gives viewers time to read every Coach Tsege tip on video
+        speakCoachLine('Welcome! Watch me coach the AI through a full 2026 American Mahjongg game from start to finish.', () => {
+          runSpeechSyncedDemoStep();
+        });
       } else {
         btn.textContent = '🤖 AI + Coach Demo';
-        btn.classList.remove('ring-2', 'ring-rose-400', 'bg-rose-950', 'text-rose-200');
-        clearInterval(simulatedDemoTimer);
+        btn.classList.remove('ring-2', 'ring-amber-300');
+        clearInterval(showcaseClockTimer);
+        clearTimeout(showcaseStepTimeout);
+        if ('speechSynthesis' in window) window.speechSynthesis.cancel();
       }
     }
 
@@ -1484,7 +1721,7 @@
     }
 
     // =========================================================================
-    // 8. UI RENDERING
+    // 8. UI RENDERING (USING CACHED PLAYER EVALUATION)
     // =========================================================================
     function renderWalls() {
       const rem = gameState.wall.length;
@@ -1591,7 +1828,7 @@
       });
 
       const showHints = gameState.practiceHintsOn || gameState.peekHintsActive;
-      const rec = computeDiscardRecommendations(0);
+      const rec = getPlayerEvaluationCached();
 
       rack.innerHTML = '';
       seat0.hand.forEach(tile => {
@@ -1634,7 +1871,6 @@
         }
       }
 
-      // Charleston bar
       const charBar = document.getElementById('charleston-bar');
       if (gameState.phase === 'CHARLESTON') {
         charBar.classList.remove('hidden');
@@ -1666,7 +1902,7 @@
     function renderNextStepBanner() {
       const banner = document.getElementById('next-step-banner');
       const txt = document.getElementById('next-step-text');
-      const rec = computeDiscardRecommendations(0);
+      const rec = getPlayerEvaluationCached();
       if (gameState.phase === 'CHARLESTON') {
         banner.classList.remove('hidden');
         txt.textContent = `👉 STEP ${gameState.charlestonStep + 1}/3: Pick 3 tiles to pass, or let Coach Tsege auto-swap`;
@@ -1683,7 +1919,7 @@
 
     function renderTopHandsSidebar() {
       const list = document.getElementById('top-hands-list');
-      const top3 = getBestHandsForSeat(0, 3);
+      const top3 = getPlayerEvaluationCached().top3;
       const unlockBtn = document.getElementById('unlock-hand-btn');
       unlockBtn.classList.toggle('hidden', !gameState.lockedTargetUid);
 
@@ -1698,12 +1934,15 @@
           gameState.lockedTargetUid = isLocked ? null : item.concrete.uid;
           renderAll();
         };
+        const scarcityTag = item.scarcityPenalty > 0
+          ? `<span class="text-[10px] font-bold text-rose-700 bg-rose-50 border border-rose-200 px-1.5 rounded ml-1">⚠️ Scarce</span>`
+          : '';
         card.innerHTML = `
           <div class="flex items-center justify-between gap-1 mb-1">
             <span class="text-[10px] font-black uppercase px-2 py-0.5 rounded ${idx === 0 ? 'bg-emerald-100 text-emerald-900' : 'bg-stone-100 text-slate-700'}">
               ${isLocked ? '🔒 Locked Target' : `#${idx + 1} Closest`} • ${item.concrete.section}
             </span>
-            <span class="font-mono font-extrabold text-xs text-slate-800">${item.distance} away • ${item.concrete.points}p</span>
+            <span class="font-mono font-extrabold text-xs text-slate-800">${item.distance} away • ${item.concrete.points}p${scarcityTag}</span>
           </div>
           <div class="font-mono font-extrabold text-xs sm:text-sm text-slate-900 tracking-tight">${item.concrete.patternText}</div>
           <div class="text-[11px] text-slate-600 mt-0.5">${item.concrete.note} ${item.concrete.suitsUsed.length ? `• Suits: <strong>${item.concrete.suitsUsed.join(' + ')}</strong>` : ''}</div>
@@ -1783,10 +2022,11 @@
 
     function lockBaseHandFromCard(baseId) {
       const variants = CONCRETE_HANDS.filter(c => c.baseId === baseId);
+      const dFreq = getDiscardFrequencyMap();
       let best = variants[0];
       let bestDist = 99;
       variants.forEach(v => {
-        const res = evaluateTilesAgainstConcreteHand(gameState.seats[0].hand, gameState.seats[0].exposures, v);
+        const res = evaluateTilesAgainstConcreteHand(gameState.seats[0].hand, gameState.seats[0].exposures, v, dFreq);
         if (!res.dead && res.distance < bestDist) { bestDist = res.distance; best = v; }
       });
       if (best) gameState.lockedTargetUid = best.uid;
@@ -1882,7 +2122,6 @@
       document.getElementById('tour-dots').innerHTML = TOUR_STEPS.map((_, i) => `<span class="w-2 h-2 rounded-full ${i === currentTourStep ? 'bg-[#245244]' : 'bg-stone-300'}"></span>`).join('');
     }
 
-    // Boot table immediately so the board is live behind the welcome splash
     initNewGame(false);
     openWelcomeScreen(false);
   </script>
@@ -1920,73 +2159,4 @@
 
       <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 16px; font-size: 12px;">
         <div style="background: #1e293b; padding: 10px; border-radius: 8px; border-left: 3px solid #38bdf8;">
-          <strong>v1–v2 Rules Core</strong><br><span style="color: #94a3b8;">~1,200 Pattern Vectors &amp; State Rollbacks</span>
-        </div>
-        <div style="background: #1e293b; padding: 10px; border-radius: 8px; border-left: 3px solid #10b981;">
-          <strong>v3–v4 Telemetry</strong><br><span style="color: #94a3b8;">Coach Heuristics &amp; JSONL Ring Buffer</span>
-        </div>
-        <div style="background: #1e293b; padding: 10px; border-radius: 8px; border-left: 3px solid #a855f7;">
-          <strong>v5/v6 Self-Play</strong><br><span style="color: #94a3b8;">3 Bot Personas &rarr; .onnx Browser Model</span>
-        </div>
-      </div>
-
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-        <span style="font-size: 12px; font-weight: 600; color: #94a3b8;">LIVE SESSION TELEMETRY STREAM (JSONL)</span>
-        <button onclick="downloadSampleJsonl()" style="
-          background: #0284c7; color: #fff; border: none; padding: 5px 12px;
-          border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer;">
-          Download Sample .jsonl
-        </button>
-      </div>
-
-      <pre id="liveJsonlPreview" style="
-        background: #020617; color: #34d399; padding: 12px; border-radius: 8px;
-        font-size: 11px; overflow-x: auto; max-height: 210px; border: 1px solid #1e293b; margin: 0;"></pre>
-    </div>
-  </div>
-
-  <script>
-    function toggleArchModal() {
-      const modal = document.getElementById('archModal');
-      const isOpen = modal.style.display === 'flex';
-      modal.style.display = isOpen ? 'none' : 'flex';
-      if (!isOpen) refreshJsonlPreview();
-    }
-
-    function getSessionTelemetryRecords() {
-      const liveEvents = (window.TelemetryLogger && Array.isArray(window.TelemetryLogger.buffer))
-        ? window.TelemetryLogger.buffer
-        : [];
-      if (liveEvents.length > 0) return liveEvents;
-
-      return [
-        {
-          game_id: "sim_demo_001",
-          turn: 14,
-          seat: 0,
-          persona: "defensive_hoarder",
-          state: { turn: 14, exposedCount: 1, minPatternDistance: 3, jokerCount: 2 },
-          action: { type: "DISCARD", tile: "7_DOT", coach_alignment: "OPTIMAL" },
-          outcome: { won_hand: 1, dealt_in: 0 }
-        }
-      ];
-    }
-
-    function refreshJsonlPreview() {
-      const lines = getSessionTelemetryRecords().slice(-5).map(r => JSON.stringify(r)).join('\n');
-      document.getElementById('liveJsonlPreview').textContent = lines;
-    }
-
-    function downloadSampleJsonl() {
-      const content = getSessionTelemetryRecords().map(r => JSON.stringify(r)).join('\n') + '\n';
-      const blob = new Blob([content], { type: 'application/x-ndjson' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'mahjongg_v6_telemetry_sample.jsonl';
-      a.click();
-      URL.revokeObjectURL(url);
-    }
-  </script>
-</body>
-</html>
+          <strong>v1–v2 Rules Core</strong><br><span
