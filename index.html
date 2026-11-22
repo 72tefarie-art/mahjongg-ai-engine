@@ -312,17 +312,57 @@
         <p id="welcome-sync-note" class="text-[11px] text-slate-500">Enter the same email on any phone or laptop to keep your name, score, and leaderboard rank synced.</p>
       </div>
 
+<!-- MODAL 0: WELCOME SPLASH -->
+  <div id="welcome-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-3 overflow-y-auto">
+    <div class="bg-[#fcfaf5] border-2 border-amber-500 rounded-3xl w-full max-w-xl p-5 sm:p-6 shadow-2xl space-y-4 my-auto">
+      <div class="flex items-start gap-3.5 bg-gradient-to-r from-[#1e463a] to-[#2b6251] text-white p-4 rounded-2xl border border-amber-400/40 shadow-md">
+        <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-pink-100 via-amber-50 to-emerald-100 border-2 border-amber-400 flex items-center justify-center shrink-0 shadow-lg">
+          <span class="text-4xl">💁🏾‍♀️</span>
+        </div>
+        <div>
+          <span class="text-[10px] font-black uppercase tracking-wider bg-amber-400 text-slate-950 px-2 py-0.5 rounded-full">2026 NMJL Edition</span>
+          <h2 class="text-lg sm:text-xl font-black mt-1 leading-tight">Welcome to 2026 American Mahjongg!</h2>
+          <p class="text-xs text-emerald-100 mt-1 leading-relaxed">
+            "I'm <strong>Coach Tsege</strong>—I'll sit right beside your rack, highlight your keepers, and stream live AI telemetry!"
+          </p>
+        </div>
+      </div>
+
+      <div class="bg-white border-2 border-stone-200 rounded-2xl p-4 space-y-3">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-extrabold uppercase tracking-wider text-slate-700">👤 Player Profile & Cross-Device Sync</span>
+          <span id="welcome-sync-badge" class="text-[11px] font-bold bg-emerald-100 text-emerald-900 px-2 py-0.5 rounded-full">☁️ Cloud Sync Ready</span>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+          <div>
+            <label for="player-name-input" class="block text-[11px] font-bold text-slate-700 mb-1">Your Leaderboard Name</label>
+            <input id="player-name-input" type="text" maxlength="22" placeholder="Enter your name..." class="w-full px-3 py-2 rounded-xl border-2 border-stone-300 focus:border-[#245244] focus:outline-none text-sm font-bold text-slate-900 bg-stone-50" />
+          </div>
+          <div>
+            <label for="player-email-input" class="block text-[11px] font-bold text-slate-700 mb-1">Email (Syncs Laptop & Phone)</label>
+            <input id="player-email-input" type="email" placeholder="you@email.com" class="w-full px-3 py-2 rounded-xl border-2 border-stone-300 focus:border-[#245244] focus:outline-none text-sm font-semibold text-slate-900 bg-stone-50" />
+          </div>
+        </div>
+        <div class="flex flex-wrap items-center justify-between gap-2 pt-1">
+          <button id="google-link-btn" onclick="signInWithGoogleAccount()" class="bg-white hover:bg-stone-100 border border-stone-300 text-slate-800 font-bold px-3 py-1.5 rounded-xl text-xs flex items-center gap-1.5 shadow-2xs transition">
+            <span>🔐</span> <span id="google-link-label">Connect Google Account</span>
+          </button>
+          <button onclick="savePlayerProfileFromWelcome()" class="bg-emerald-100 hover:bg-emerald-200 text-emerald-950 font-extrabold px-3 py-1.5 rounded-xl text-xs transition">💾 Save Name & Sync Stats</button>
+        </div>
+        <p id="welcome-sync-note" class="text-[11px] text-slate-500">Enter the same email on any phone or laptop to keep your name, score, and leaderboard rank synced.</p>
+      </div>
+
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
-        <button onclick="startTourFromWelcome()" class="bg-amber-400 hover:bg-amber-300 text-slate-950 font-black px-4 py-3 rounded-2xl text-xs sm:text-sm shadow-md border-2 border-amber-500 transition flex items-center justify-center gap-2">
+        <button type="button" onclick="document.getElementById('welcome-modal').style.display='none'; if(typeof startTourFromWelcome==='function') startTourFromWelcome();" class="bg-amber-400 hover:bg-amber-300 text-slate-950 font-black px-4 py-3 rounded-2xl text-xs sm:text-sm shadow-md border-2 border-amber-500 transition flex items-center justify-center gap-2">
           <span>🎓 Quick 4-Step Tour</span><span class="text-[10px] bg-slate-900 text-amber-300 px-1.5 py-0.5 rounded">1 Min</span>
         </button>
-        <button onclick="enterTableFromWelcome()" class="bg-[#245244] hover:bg-[#1a3e33] text-white font-extrabold px-4 py-3 rounded-2xl text-xs sm:text-sm shadow-md transition flex items-center justify-center gap-2">
+        <button type="button" onclick="document.getElementById('welcome-modal').style.display='none'; if(typeof enterTableFromWelcome==='function') enterTableFromWelcome();" class="bg-[#245244] hover:bg-[#1a3e33] text-white font-extrabold px-4 py-3 rounded-2xl text-xs sm:text-sm shadow-md transition flex items-center justify-center gap-2">
           <span>🀄 Jump Straight to Table →</span>
         </button>
       </div>
     </div>
   </div>
-
+   
   <!-- MODAL 0B: TOUR -->
   <div id="walkthrough-modal" class="hidden fixed inset-0 z-50 bg-black/75 items-center justify-center p-3">
     <div class="bg-[#fcfaf5] border-2 border-amber-500 rounded-3xl w-full max-w-lg p-5 shadow-2xl space-y-4">
