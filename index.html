@@ -1,0 +1,102 @@
+<!-- v6 ONNX Runtime & Browser Bridge -->
+<script src="https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/ort.min.js"></script>
+<script src="./onnx-browser-hook.js"></script>
+
+<!-- Portfolio Architecture & Live Telemetry Inspector Modal -->
+<button id="archInspectorBtn" onclick="toggleArchModal()" style="
+  position: fixed; bottom: 16px; right: 16px; z-index: 9998;
+  background: #0f172a; color: #f8fafc; border: 1px solid #38bdf8;
+  padding: 10px 16px; border-radius: 999px; font-family: system-ui, sans-serif;
+  font-size: 13px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 14px rgba(0,0,0,0.35);">
+  ⚙️ AI Pipeline &amp; Live JSONL
+</button>
+
+<div id="archModal" style="
+  display: none; position: fixed; inset: 0; z-index: 9999;
+  background: rgba(2, 6, 23, 0.82); backdrop-filter: blur(4px);
+  align-items: center; justify-content: center; padding: 20px; font-family: system-ui, sans-serif;">
+  <div style="
+    background: #0f172a; color: #e2e8f0; border: 1px solid #334155;
+    border-radius: 14px; max-width: 760px; width: 100%; max-height: 88vh;
+    overflow-y: auto; padding: 24px; box-shadow: 0 20px 40px rgba(0,0,0,0.5);">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+      <h2 style="margin: 0; font-size: 18px; color: #38bdf8;">System Architecture &amp; v6 ONNX Pipeline</h2>
+      <button onclick="toggleArchModal()" style="background: none; border: none; color: #94a3b8; font-size: 22px; cursor: pointer;">&times;</button>
+    </div>
+
+    <p style="font-size: 13px; color: #cbd5e1; line-height: 1.5; margin-bottom: 16px;">
+      <strong>Zero-Server Frozen Architecture:</strong> Evaluates ~1,200 combinatorial hand vectors locally, logs structured
+      <code>(State &rarr; Action &rarr; Outcome)</code> JSONL trajectories, and runs v6 persona-trained inference client-side.
+    </p>
+
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 16px; font-size: 12px;">
+      <div style="background: #1e293b; padding: 10px; border-radius: 8px; border-left: 3px solid #38bdf8;">
+        <strong>v1–v2 Rules Core</strong><br><span style="color: #94a3b8;">~1,200 Pattern Vectors &amp; State Rollbacks</span>
+      </div>
+      <div style="background: #1e293b; padding: 10px; border-radius: 8px; border-left: 3px solid #10b981;">
+        <strong>v3–v4 Telemetry</strong><br><span style="color: #94a3b8;">Coach Heuristics &amp; JSONL Ring Buffer</span>
+      </div>
+      <div style="background: #1e293b; padding: 10px; border-radius: 8px; border-left: 3px solid #a855f7;">
+        <strong>v5/v6 Self-Play</strong><br><span style="color: #94a3b8;">3 Bot Personas &rarr; .onnx Browser Model</span>
+      </div>
+    </div>
+
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+      <span style="font-size: 12px; font-weight: 600; color: #94a3b8;">LIVE SESSION TELEMETRY STREAM (JSONL)</span>
+      <button onclick="downloadSampleJsonl()" style="
+        background: #0284c7; color: #fff; border: none; padding: 5px 12px;
+        border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer;">
+        Download Sample .jsonl
+      </button>
+    </div>
+
+    <pre id="liveJsonlPreview" style="
+      background: #020617; color: #34d399; padding: 12px; border-radius: 8px;
+      font-size: 11px; overflow-x: auto; max-height: 210px; border: 1px solid #1e293b; margin: 0;"></pre>
+  </div>
+</div>
+
+<script>
+function toggleArchModal() {
+  const modal = document.getElementById('archModal');
+  const isOpen = modal.style.display === 'flex';
+  modal.style.display = isOpen ? 'none' : 'flex';
+  if (!isOpen) refreshJsonlPreview();
+}
+
+function getSessionTelemetryRecords() {
+  // Pulls live events from your existing TelemetryLogger buffer if present, or shows canonical schema
+  const liveEvents = (window.TelemetryLogger && Array.isArray(window.TelemetryLogger.buffer))
+    ? window.TelemetryLogger.buffer
+    : [];
+  if (liveEvents.length > 0) return liveEvents;
+
+  return [
+    {
+      game_id: "sim_demo_001",
+      turn: 14,
+      seat: 0,
+      persona: "defensive_hoarder",
+      state: { turn: 14, exposedCount: 1, minPatternDistance: 3, jokerCount: 2 },
+      action: { type: "DISCARD", tile: "7_DOT", coach_alignment: "OPTIMAL" },
+      outcome: { won_hand: 1, dealt_in: 0 }
+    }
+  ];
+}
+
+function refreshJsonlPreview() {
+  const lines = getSessionTelemetryRecords().slice(-5).map(r => JSON.stringify(r)).join('\n');
+  document.getElementById('liveJsonlPreview').textContent = lines;
+}
+
+function downloadSampleJsonl() {
+  const content = getSessionTelemetryRecords().map(r => JSON.stringify(r)).join('\n') + '\n';
+  const blob = new Blob([content], { type: 'application/x-ndjson' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'mahjongg_v6_telemetry_sample.jsonl';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+</script>
