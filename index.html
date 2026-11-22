@@ -2130,7 +2130,7 @@
   <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/ort.min.js"></script>
   <script src="./onnx-browser-hook.js"></script>
 
-  <!-- Portfolio Architecture & Live Telemetry Inspector Modal -->
+ <!-- Portfolio Architecture & Live Telemetry Inspector Modal -->
   <button id="archInspectorBtn" onclick="toggleArchModal()" style="
     position: fixed; bottom: 16px; right: 16px; z-index: 9998;
     background: #0f172a; color: #f8fafc; border: 1px solid #38bdf8;
@@ -2138,6 +2138,18 @@
     font-size: 13px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 14px rgba(0,0,0,0.35);">
     ⚙️ AI Pipeline &amp; Live JSONL
   </button>
+
+  <!-- Player Win-Rate & Playtime Stats Badge -->
+  <div id="mj-stats-badge" style="
+    position: fixed; bottom: 16px; left: 16px; z-index: 9998;
+    background: #0f172a; color: #f8fafc; border: 1px solid #334155;
+    padding: 10px 16px; border-radius: 999px; font-family: system-ui, sans-serif;
+    font-size: 13px; font-weight: 600; box-shadow: 0 4px 14px rgba(0,0,0,0.35);
+    display: inline-flex; align-items: center; gap: 8px;">
+    <span>🏆 <strong id="stat-wins">0</strong>/<span id="stat-played">0</span> (<span id="stat-rate">0%</span>)</span>
+    <span style="color: #64748b;">•</span>
+    <span>⏱️ <span id="stat-time">0m</span></span>
+  </div>
 
   <div id="archModal" style="
     display: none; position: fixed; inset: 0; z-index: 9999;
